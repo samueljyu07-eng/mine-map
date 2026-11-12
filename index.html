@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Hot Breccia Project - 3D walkthrough (DRAFT)</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="labels"></div>
+
+      <header id="title">
+        <h1>Hot Breccia Project</h1>
+        <p>3D walkthrough · Blade Resources (CSE: AZCU)</p>
+      </header>
+
+      <section id="panel" aria-label="Map controls">
+        <h2>Layers</h2>
+        <label class="layer"><input type="checkbox" id="t-imagery" checked /><span>Aerial imagery<small id="m-imagery"></small></span></label>
+        <label class="layer"><input type="checkbox" id="t-samples" checked /><span>Surface samples<small id="m-samples"></small></span></label>
+        <label class="layer"><input type="checkbox" id="t-claims" checked /><span id="l-claims">Claims<small id="m-claims"></small></span></label>
+        <p class="layer-note" id="m-terrain"></p>
+        <h2>Vertical exaggeration</h2>
+        <div class="row"><input type="range" id="exag" min="1" max="3" step="0.5" value="1" aria-label="Vertical exaggeration" /><output id="exag-val">1×</output></div>
+        <button id="reset" type="button">Reset view</button>
+      </section>
+
+      <div id="exag-badge" hidden></div>
+
+      <aside id="info" hidden aria-live="polite">
+        <button id="info-close" type="button" aria-label="Close">×</button>
+        <div id="info-body"></div>
+      </aside>
+
+      <div id="north" title="North arrow"><div id="north-arrow"><span>N</span></div></div>
+      <div id="scale"><div id="scale-bar"></div><span id="scale-label"></span></div>
+      <div id="readout">Move the pointer over the terrain</div>
+
+      <footer id="footer">
+        <strong>DRAFT, not reviewed by the Qualified Person</strong>
+        <span id="credits"></span>
+      </footer>
+
+      <div id="loading">Loading terrain…</div>
+
+      <div id="disclaimer" role="dialog" aria-modal="true" aria-labelledby="disc-title">
+        <div class="disc-card">
+          <p class="disc-flag">DRAFT disclaimer: placeholder wording, not reviewed by the Qualified Person</p>
+          <h2 id="disc-title">Before you open the model</h2>
+          <p>This 3D model is a draft visualisation of the Hot Breccia project area. It is for general information only.</p>
+          <ul>
+            <li>Terrain and aerial imagery are public US government data (USGS 3DEP, USDA NAIP).</li>
+            <li>Surface sample results are historical/vendor data from the Prismo Metals website. They have not been verified by the QP. Selected samples are not representative.</li>
+            <li>The claims outline is a PLACEHOLDER. It is not the claim boundary.</li>
+            <li>Nothing in this model is investment advice.</li>
+          </ul>
+          <button id="disc-ok" type="button">I understand</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

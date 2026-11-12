@@ -1,0 +1,108 @@
+:root {
+  --bg: #12161b;
+  --panel: rgba(18, 22, 27, 0.86);
+  --line: rgba(255, 255, 255, 0.16);
+  --text: #eef1f4;
+  --muted: #a9b3bd;
+  --accent: #f2b441;
+  --warn: #ff7a59;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+}
+* { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+#app { position: relative; }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+/* isolation keeps the pin stacking order inside this layer, so panels and the disclaimer stay on top */
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; isolation: isolate; }
+
+#title, #panel, #info, #readout, #scale, #exag-badge {
+  position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  backdrop-filter: blur(6px); z-index: 2;
+}
+#title { top: 12px; left: 12px; padding: 8px 12px; }
+#title h1 { margin: 0; font-size: 17px; }
+#title p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+
+#panel { top: 12px; right: 12px; width: 232px; padding: 10px 12px 12px; }
+#panel h2 { margin: 8px 0 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+#panel h2:first-child { margin-top: 0; }
+.layer { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; cursor: pointer; }
+.layer input { margin-top: 2px; accent-color: var(--accent); }
+.layer small, .layer-note { display: block; color: var(--muted); font-size: 11px; line-height: 1.3; }
+.layer-note { margin: 4px 0 0; }
+.row { display: flex; align-items: center; gap: 8px; }
+.row input { flex: 1; accent-color: var(--accent); }
+.row output { width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: var(--text); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--line);
+  border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+button:hover { background: rgba(255, 255, 255, 0.18); }
+#reset { width: 100%; margin-top: 10px; }
+
+#exag-badge { top: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px; color: #1b1300;
+  background: var(--accent); border-color: transparent; font-weight: 600; white-space: nowrap; }
+
+#info { left: 12px; top: 76px; width: 290px; max-width: calc(100% - 24px); padding: 12px 14px; }
+#info h3 { margin: 0 24px 8px 0; font-size: 16px; }
+#info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
+#info dt { color: var(--muted); }
+#info dd { margin: 0; font-variant-numeric: tabular-nums; }
+#info p { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+#info p.src { color: var(--text); }
+#info-close { position: absolute; top: 6px; right: 6px; padding: 2px 8px; font-size: 16px; }
+
+#north { z-index: 2; position: absolute; left: 14px; bottom: calc(var(--footer-h, 40px) + 48px); width: 44px; height: 44px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--line); }
+#north-arrow { position: absolute; inset: 0; }
+#north-arrow::before { content: ''; position: absolute; left: 50%; top: 5px; margin-left: -6px;
+  border: 6px solid transparent; border-bottom: 14px solid var(--warn); border-top: 0; }
+#north-arrow span { position: absolute; left: 0; right: 0; bottom: 5px; text-align: center; font-size: 12px; font-weight: 700; }
+
+#scale { left: 68px; bottom: calc(var(--footer-h, 40px) + 52px); padding: 6px 10px 5px; font-size: 12px; }
+#scale-bar { height: 6px; border: 2px solid var(--text); border-top: 0; margin-bottom: 3px; }
+#readout { left: 12px; bottom: calc(var(--footer-h, 40px) + 8px); padding: 6px 10px; font-size: 12px; font-variant-numeric: tabular-nums; max-width: calc(100% - 24px); }
+
+#footer { z-index: 2; position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 12px calc(7px + env(safe-area-inset-bottom));
+  background: rgba(10, 12, 15, 0.92); border-top: 1px solid var(--line); font-size: 11px; line-height: 1.35;
+  display: flex; flex-wrap: wrap; gap: 2px 14px; }
+#footer strong { color: var(--accent); }
+#footer span { color: var(--muted); }
+
+#loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+
+.pin { display: flex; flex-direction: column; align-items: center; cursor: pointer; pointer-events: auto;
+  padding: 0; background: none; border: 0; }
+.pin:hover { background: none; }
+.pin-label { padding: 1px 6px; margin-bottom: 2px; font-size: 11px; font-weight: 600; color: #1b1300;
+  background: var(--accent); border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.pin-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #1b1300;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7); }
+.pin.active .pin-label, .pin:hover .pin-label { background: #fff; }
+.pin.active .pin-dot { background: #fff; }
+#labels.far .pin-label { display: none; }
+.claims-label { padding: 2px 8px; font-size: 11px; font-weight: 700; color: #fff; background: #c2185b;
+  border-radius: 4px; white-space: nowrap; }
+
+#disclaimer { position: absolute; inset: 0; z-index: 10; background: var(--bg); display: grid; place-items: center; padding: 16px; overflow: auto; }
+.disc-card { max-width: 520px; padding: 20px 22px; background: #1b2128; border: 1px solid var(--line); border-radius: 10px; line-height: 1.5; }
+.disc-card h2 { margin: 8px 0; }
+.disc-card ul { padding-left: 18px; }
+.disc-card li { margin: 6px 0; }
+.disc-flag { margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; color: #1b1300; background: var(--accent); border-radius: 6px; }
+#disc-ok { margin-top: 8px; padding: 10px 18px; font-weight: 600; background: var(--accent); color: #1b1300; border: 0; }
+
+@media (max-width: 1000px) {
+  #exag-badge { top: 70px; left: 12px; transform: none; font-size: 12px; }
+  #info { top: 108px; }
+}
+@media (max-width: 640px) {
+  #title { padding: 6px 10px; }
+  #title h1 { font-size: 15px; }
+  #panel { top: auto; bottom: calc(var(--footer-h, 40px) + 100px); right: 8px; width: 190px; padding: 8px 10px 10px; }
+  .layer small, .layer-note { display: none; }
+  #info { top: 96px; left: 8px; }
+  #exag-badge { top: 58px; left: 8px; }
+  #footer { font-size: 10px; }
+}

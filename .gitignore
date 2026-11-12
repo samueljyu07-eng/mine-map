@@ -22,3 +22,6 @@ venv/
 # Raw data: never edited, never committed
 data/raw/*
 !data/raw/.gitkeep
+
+# Local Claude Code tooling
+.claude/
