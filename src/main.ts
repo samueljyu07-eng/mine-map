@@ -62,11 +62,11 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const labelRenderer = new CSS2DRenderer({ element: $('labels') });
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x12161b);
-const camera = new THREE.PerspectiveCamera(45, 1, 10, 100000);
+const camera = new THREE.PerspectiveCamera(45, 1, 4, 100000);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI / 2 - 0.05;
-controls.minDistance = 150;
+controls.minDistance = 100;
 controls.maxDistance = 34000;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x777777, 1.6));
 const sun = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -326,6 +326,7 @@ const STYLE: Record<string, { colour: number; width: number; dashed?: boolean; g
   ztem_flight_line: { colour: 0x9be7ff, width: 1.5, group: ztemGroup, short: 'Flight line', labelled: true },
   san_carlos_reservation_boundary: { colour: 0xffffff, width: 2, dashed: true, group: resvGroup, short: 'San Carlos Reservation boundary', labelled: true },
 };
+const lineMaterials: Record<string, LineMaterial[]> = {};
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
 
 /** Every line or ring in a GeoJSON geometry, as lists of [easting, northing]. */
@@ -381,6 +382,7 @@ function buildTraced(file: TracedFile | ZtemFile) {
     const st = STYLE[kind];
     if (!st) continue;
     const material = new LineMaterial({ color: st.colour, linewidth: st.width, dashed: !!st.dashed, dashSize: 60, gapSize: 40, depthTest: false });
+    (lineMaterials[kind] ??= []).push(material);
     let longest: number[][] = [];
     for (const part of lineParts(f.geometry)) {
       const pts = drape(part, 4);
@@ -425,6 +427,147 @@ function resetView() {
   requestRender();
 }
 
+// ---------- Camera moves ----------
+let fly: { from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3]; t0: number; ms: number } | null = null;
+function flyTo(position: THREE.Vector3, target: THREE.Vector3, ms = 1400) {
+  fly = { from: [camera.position.clone(), controls.target.clone()], to: [position, target], t0: performance.now(), ms };
+}
+function stepFly() {
+  if (!fly) return;
+  const k = Math.min(1, (performance.now() - fly.t0) / fly.ms);
+  const s = k * k * (3 - 2 * k); // ease in and out
+  camera.position.lerpVectors(fly.from[0], fly.to[0], s);
+  controls.target.lerpVectors(fly.from[1], fly.to[1], s);
+  if (k === 1) fly = null;
+  requestRender();
+}
+canvas.addEventListener('pointerdown', () => { fly = null; });
+/** Camera looking at a ground point from a compass direction (bearing the camera sits at), distance and height angle. */
+function lookAt(e: number, n: number, fromBearingDeg: number, dist: number, elevDeg: number): [THREE.Vector3, THREE.Vector3] {
+  const [x, z] = terrain.toWorld(e, n);
+  const target = new THREE.Vector3(x, terrain.heightAt(e, n) * exaggeration, z);
+  const b = THREE.MathUtils.degToRad(fromBearingDeg);
+  const el = THREE.MathUtils.degToRad(elevDeg);
+  const pos = new THREE.Vector3(x + Math.sin(b) * Math.cos(el) * dist, target.y + Math.sin(el) * dist, z - Math.cos(b) * Math.cos(el) * dist);
+  return [pos, target];
+}
+
+// ---------- Plate 2 photo view (approximate viewpoint, adjustable) ----------
+interface Plate2File { viewpoint: Viewpoint; photo: string; estimated_horizontal_field_of_view_deg: number; estimate_uncertainty_m: number }
+interface Viewpoint { easting: number; northing: number; eye_height_m: number; heading_deg: number; pitch_deg: number }
+let plate2Start: Viewpoint;
+let plate2: Viewpoint;
+let plate2Hfov = 70;
+let plate2Spread = 0;
+/** Match the 3D camera's width of view to the estimated lens of the photo (or go back to the normal 45 degrees). */
+function setLens(photo: boolean) {
+  camera.fov = photo ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(plate2Hfov / 2)) / camera.aspect)) : 45;
+  camera.updateProjectionMatrix();
+  requestRender();
+}
+function plate2Camera(): [THREE.Vector3, THREE.Vector3] {
+  const [x, z] = terrain.toWorld(plate2.easting, plate2.northing);
+  const pos = new THREE.Vector3(x, (terrain.heightAt(plate2.easting, plate2.northing) + plate2.eye_height_m) * exaggeration, z);
+  const h = THREE.MathUtils.degToRad(plate2.heading_deg);
+  const p = THREE.MathUtils.degToRad(plate2.pitch_deg);
+  const dir = new THREE.Vector3(Math.sin(h) * Math.cos(p), Math.sin(p), -Math.cos(h) * Math.cos(p));
+  return [pos, pos.clone().addScaledVector(dir, 700)];
+}
+function showPlate2(animate: boolean) {
+  $('plate2').hidden = false;
+  $('info').hidden = true;
+  setLens(true);
+  const [pos, target] = plate2Camera();
+  if (animate) flyTo(pos, target);
+  else { fly = null; camera.position.copy(pos); controls.target.copy(target); controls.update(); requestRender(); }
+  $('plate2-readout').textContent = `Approximate viewpoint: E ${fmt(plate2.easting)}, N ${fmt(plate2.northing)}, ${plate2.eye_height_m} m above the ground, looking ${plate2.heading_deg}° (90° is east, 112° is east-southeast), tilt ${plate2.pitch_deg}°. Estimated from the terrain, not surveyed; other spots within about ${plate2Spread} m fit equally well. The far peaks in the photo lie outside the terrain model.`;
+}
+function setupPlate2(file: Plate2File) {
+  plate2Start = file.viewpoint;
+  plate2Hfov = file.estimated_horizontal_field_of_view_deg;
+  plate2Spread = file.estimate_uncertainty_m;
+  plate2 = { ...plate2Start };
+  $<HTMLImageElement>('plate2-img').src = `${BASE}${file.photo}`;
+  $('plate2-open').addEventListener('click', () => showPlate2(true));
+  $('plate2-close').addEventListener('click', () => { $('plate2').hidden = true; setLens(false); });
+  document.querySelectorAll<HTMLButtonElement>('.nudge button').forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.n;
+    if (k === 'w') plate2.easting -= 25; else if (k === 'e') plate2.easting += 25;
+    else if (k === 'n') plate2.northing += 25; else if (k === 's') plate2.northing -= 25;
+    else if (k === 'l') plate2.heading_deg -= 3; else if (k === 'r') plate2.heading_deg += 3;
+    else if (k === 'u') plate2.pitch_deg += 1; else if (k === 'd') plate2.pitch_deg -= 1;
+    else if (k === 'hi') plate2.eye_height_m += 2; else if (k === 'lo') plate2.eye_height_m = Math.max(1, plate2.eye_height_m - 2);
+    else plate2 = { ...plate2Start };
+    showPlate2(false);
+  }));
+}
+
+// ---------- History timeline ----------
+interface TimelineEvent { when: string; text: string; sections: string; view: string; highlight?: 'boundary' | 'collars' | 'ztem' | 'report' }
+let events: TimelineEvent[] = [];
+let stop = -1;
+let undoHighlight: (() => void) | null = null;
+
+function highlight(key: TimelineEvent['highlight']) {
+  undoHighlight?.();
+  undoHighlight = null;
+  if (!key) return;
+  const box = { boundary: 't-boundary', collars: 't-collars', ztem: 't-ztem', report: 't-report' }[key];
+  const input = $<HTMLInputElement>(box);
+  const wasOn = input.checked;
+  if (!wasOn) input.click();
+  const kinds = { boundary: ['property_boundary'], ztem: ['ztem_footprint', 'ztem_flight_line'], collars: [], report: [] }[key];
+  const mats = kinds.flatMap((k) => lineMaterials[k] ?? []);
+  const widths = mats.map((m) => m.linewidth);
+  mats.forEach((m) => { m.linewidth *= 1.8; });
+  const pins = key === 'collars' ? '.pin.collar' : key === 'report' ? '.pin.prismo, .pin.qp_check' : null;
+  const mark = (on: boolean) => { if (pins) document.querySelectorAll(pins).forEach((el) => el.classList.toggle('hl', on)); };
+  requestAnimationFrame(() => requestAnimationFrame(() => mark(true))); // after the pins are drawn
+  undoHighlight = () => {
+    mats.forEach((m, i) => { m.linewidth = widths[i]; });
+    mark(false);
+    if (!wasOn && input.checked) input.click();
+  };
+}
+
+function viewFor(name: string): [THREE.Vector3, THREE.Vector3] {
+  switch (name) {
+    case 'regional': return lookAt(524500, 3654800, 180, 17000, 62);
+    case 'property': return lookAt(525300, 3654000, 190, 9000, 48);
+    case 'property_west': return lookAt(524300, 3654300, 250, 7000, 40);
+    case 'holes': return lookAt(526650, 3653800, 215, 3200, 34);
+    case 'holes_close': return lookAt(526850, 3653700, 300, 1500, 28);
+    case 'survey': return lookAt(525600, 3655600, 180, 15000, 58);
+    case 'samples': return lookAt(526600, 3653600, 150, 5200, 44);
+    case 'trail': return lookAt(526700, 3652600, 170, 5200, 36);
+    case 'plate2': return plate2Camera();
+    default: return [home.position.clone(), home.target.clone().setY(home.target.y * exaggeration)];
+  }
+}
+
+function goToStop(i: number) {
+  stop = (i + events.length) % events.length;
+  const ev = events[stop];
+  $('tl-when').textContent = `${stop + 1} of ${events.length} · ${ev.when}`;
+  $('tl-text').textContent = ev.text;
+  $('tl-src').textContent = `Source: NI 43-101 report, section ${ev.sections}. Historical information, not verified by the QP.`;
+  document.querySelectorAll('#tl-dots button').forEach((d, k) => d.classList.toggle('on', k === stop));
+  highlight(ev.highlight);
+  if (ev.view === 'plate2') showPlate2(true);
+  else { $('plate2').hidden = true; setLens(false); flyTo(...viewFor(ev.view)); }
+}
+
+function setupTimeline(list: TimelineEvent[]) {
+  events = list;
+  $('tl-dots').innerHTML = list.map((e, i) => `<button type="button" aria-label="Event ${i + 1}: ${esc(e.when)}"></button>`).join('');
+  document.querySelectorAll<HTMLButtonElement>('#tl-dots button').forEach((d, i) => d.addEventListener('click', () => goToStop(i)));
+  $('tl-prev').addEventListener('click', () => goToStop(stop - 1));
+  $('tl-next').addEventListener('click', () => goToStop(stop + 1));
+  $<HTMLDetailsElement>('timeline').addEventListener('toggle', (e) => {
+    if ((e.target as HTMLDetailsElement).open) { if (stop < 0) goToStop(0); } else { highlight(undefined); }
+  });
+}
+
 // ---------- UI: toggles, exaggeration, scale bar, north arrow, readout ----------
 const toggle = (id: string, fn: (on: boolean) => void) =>
   $<HTMLInputElement>(id).addEventListener('change', (e) => { fn((e.target as HTMLInputElement).checked); requestRender(); });
@@ -442,7 +585,7 @@ $<HTMLInputElement>('fig2-opacity').addEventListener('input', (e) => {
   for (const f of fig2Materials) f.mat.opacity = Number((e.target as HTMLInputElement).value);
   requestRender();
 });
-$('reset').addEventListener('click', resetView);
+$('reset').addEventListener('click', () => { $('plate2').hidden = true; setLens(false); fly = null; resetView(); });
 $<HTMLInputElement>('t-fig2-lines').addEventListener('change', applyFig2);
 // Straight down with north at the top, like a paper map. Keeps the current centre and zoom.
 $('topdown').addEventListener('click', () => {
@@ -496,6 +639,7 @@ canvas.addEventListener('pointerdown', (e) => { pointer = { x: e.clientX, y: e.c
 
 function frame() {
   requestAnimationFrame(frame);
+  stepFly();
   controls.update();
   updateReadout();
   if (!dirty) return;
@@ -539,11 +683,19 @@ async function start() {
   const [x, z] = terrain.toWorld(ce, cn);
   home.target.set(x, terrain.heightAt(ce, cn), z);
   home.position.set(x - 2400, home.target.y + 2600, z + 4200);
+  setupPlate2(await getJson<Plate2File>('plate2.json'));
+  setupTimeline((await getJson<{ events: TimelineEvent[] }>('timeline.json')).events);
   resetView();
   $('loading').remove();
   frame();
+  // Development only: ?stop=4 opens the timeline at stop 4, ?plate2=1 opens the photo view (used for screenshots).
+  if (import.meta.env.DEV) {
+    const q = new URLSearchParams(location.search);
+    if (q.has('stop')) { $<HTMLDetailsElement>('timeline').open = true; goToStop(Number(q.get('stop')) - 1); }
+    if (q.has('plate2')) showPlate2(false);
+  }
   // Handy for checks in the browser console during development.
-  if (import.meta.env.DEV) Object.assign(window, { __viewer: { terrain, camera, controls, renderer, scene, requestRender } });
+  if (import.meta.env.DEV) Object.assign(window, { __viewer: { terrain, camera, controls, renderer, scene, requestRender, goToStop } });
 }
 start().catch((err) => {
   console.error(err);

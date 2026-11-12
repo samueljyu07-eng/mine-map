@@ -38,6 +38,7 @@
         <div class="row"><input type="range" id="exag" min="1" max="3" step="0.5" value="1" aria-label="Vertical exaggeration" /><output id="exag-val">1×</output></div>
         <button id="reset" type="button">Reset view</button>
         <button id="topdown" type="button">Top-down map view (north up)</button>
+        <button id="plate2-open" type="button">Plate 2 photo view (approximate)</button>
       </details>
 
       <div id="exag-badge" hidden></div>
@@ -46,6 +47,33 @@
         <button id="info-close" type="button" aria-label="Close">×</button>
         <div id="info-body"></div>
       </aside>
+
+      <aside id="plate2" hidden>
+        <button id="plate2-close" type="button" aria-label="Close">×</button>
+        <h3>Report Plate 2 beside the 3D view</h3>
+        <img id="plate2-img" alt="Report Plate 2: Hot Breccia drill location photo, looking east-southeast" />
+        <p class="src">Report Plate 2: Hot Breccia Drill Location Photo - Author. Lettering on the photo is from the report.</p>
+        <p><strong>Approximate viewpoint.</strong> The report does not give the photo position, so the 3D camera starts from an estimate. Nudge it until the skyline matches.</p>
+        <div class="nudge">
+          <button data-n="w" type="button">West 25 m</button><button data-n="e" type="button">East 25 m</button>
+          <button data-n="n" type="button">North 25 m</button><button data-n="s" type="button">South 25 m</button>
+          <button data-n="l" type="button">Turn left 3°</button><button data-n="r" type="button">Turn right 3°</button>
+          <button data-n="u" type="button">Tilt up 1°</button><button data-n="d" type="button">Tilt down 1°</button>
+          <button data-n="hi" type="button">Higher 2 m</button><button data-n="lo" type="button">Lower 2 m</button>
+          <button data-n="reset" type="button">Back to estimate</button>
+        </div>
+        <p id="plate2-readout"></p>
+      </aside>
+
+      <details id="timeline">
+        <summary>History timeline</summary>
+        <div class="tl-body">
+          <div class="tl-nav"><button id="tl-prev" type="button" aria-label="Previous event">‹</button><div id="tl-dots"></div><button id="tl-next" type="button" aria-label="Next event">›</button></div>
+          <p id="tl-when"></p>
+          <p id="tl-text"></p>
+          <p id="tl-src"></p>
+        </div>
+      </details>
 
       <div id="north" title="North arrow"><div id="north-arrow"><span>N</span></div></div>
       <div id="scale"><div id="scale-bar"></div><span id="scale-label"></span></div>

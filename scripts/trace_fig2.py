@@ -124,6 +124,10 @@ for i, sl in enumerate(ndi.find_objects(dl), start=1):
     if length < 5 or length / width < 1.5: continue                 # dashes are elongated; dots and blobs are not
     a, b_ = c - vt[0] * length / 2, c + vt[0] * length / 2
     segs.append(LineString([to_utm(*a), to_utm(*b_)]))
+# Keep only dashes that belong to a run (at least two other dashes within 250 m); isolated ones are stray marks.
+mids = np.array([[sg.centroid.x, sg.centroid.y] for sg in segs])
+near = (np.hypot(mids[:, None, 0] - mids[None, :, 0], mids[:, None, 1] - mids[None, :, 1]) < 250).sum(1) - 1
+segs = [sg for sg, k in zip(segs, near) if k >= 2]
 trail = unary_union(segs)
 print(f"access trail: {len(segs)} dashes, {sum(s.length for s in segs) / 1000:.1f} km of dash length")
 add(trail, "access_trail", "Access trail (as dashed on the figure)", note="Each printed dash is one segment; gaps between dashes are not filled in.")

@@ -19,13 +19,25 @@ Terrain box: E 518,000-530,000, N 3,649,000-3,661,000.
 | Gila River | USGS National Hydrography Dataset (NHD) flowlines, hydro.nationalmap.gov | Downloaded 2026-11-12 | US Government work, public domain | Large-scale (1:24,000 class) | NAD83 geographic | Exact per source (not traced) | No |
 | State Route 77 | US Census Bureau TIGER/Line roads (TIGERweb) | Downloaded 2026-11-12 | US Government work, public domain | TIGER accuracy (typically within about 10 m) | NAD83 geographic | Exact per source (not traced) | No |
 | San Carlos Reservation boundary | US Census Bureau TIGER/Line American Indian areas (TIGERweb) | Downloaded 2026-11-12 | US Government work, public domain | TIGER accuracy; a statistical boundary, not a legal survey | NAD83 geographic | Exact per source (Fig 2 shows a text label only, no line) | No |
-| Report figures (Fig 2, Fig 8, Plate 2) | Extracted from the report PDF, pages 19, 33, 32 | Report effective 2026-06-30 | Blade Resources report | 1314 x 1700 px (Plate 2: 1314 x 652) | Fig 2 and Fig 8 state "WGS84 Zone 12N" | Fig 2 georeferenced (below); Fig 8 not yet | No |
+| ZTEM survey footprint | Traced from report Figure 8: extent of the coloured grid visible on the figure | Survey July 2023 (Geotech); report effective 2026-06-30; traced 2026-11-12 | Blade Resources report | Figure pixel 5.7 m | WGS84 / UTM 12N (as printed) | **Approximate, traced from report Fig 8.** Georeferencing error about 23 m. Cut off by the map frame in the north | No |
+| Select ZTEM flight lines L1150-L1250 | Traced from report Figure 8 ("select lines shown in report Fig 8") | as above | Blade Resources report | Figure pixel 5.7 m | WGS84 / UTM 12N | Approximate, traced from report Fig 8 (about 23 m) | No |
+| Plate 2 photo and viewpoint | Report Plate 2 (page 32), photo by the report author | Photo date not stated | Blade Resources report | 1171 x 652 px | n/a | **Approximate viewpoint.** Position estimated from the terrain (scripts/estimate_plate2.py); equally good spots within about 130 m; adjustable in the viewer | No |
+| History timeline | Event wording supplied by the project owner; report sections looked up in the report text | Report effective 2026-06-30 | Blade Resources report | n/a | n/a | Text only | No. Historical information, not verified by the QP |
+| Report figures (Fig 2, Fig 8, Plate 2) | Extracted from the report PDF, pages 19, 33, 32 | Report effective 2026-06-30 | Blade Resources report | 1314 x 1700 px (Plate 2: 1314 x 652) | Fig 2 and Fig 8 state "WGS84 Zone 12N" | Fig 2 and Fig 8 georeferenced (below) | No |
 
 ## Fig 2 georeferencing
 
 - Control points: the six crossings of the printed UTM grid lines. Residuals 1.6 to 3.1 m, RMS 2.2 m. One figure pixel is 8.2 m.
 - Independent check against public lines: the figure's highway sits a median 19 m (90% within 38 m) from the TIGER road line; the figure's river a median 19 m (90% within 51 m) from the NHD line.
 - The powerline is not drawn on Fig 2, so it is not traced.
+
+## Fig 8 georeferencing
+
+- Fig 8 has only one easting grid line, so the control points are the two printed grid crossings plus the seven "Historical Drill Sites" symbols (coordinates from report Table 3).
+- Residuals: grid crossings 6 and 14 m; OC-1 4 m, OC-2 6 m, OC-5 9 m, OCC-8 14 m, OCC-7 26 m, OC-3 39 m, OCC-6 43 m. RMS 23 m. One figure pixel is 5.7 m.
+- Independent check: the figure's highway sits a median 30 m (90% within 47 m) from the TIGER State Route 77 line.
+- The resistivity colours are not exported to the viewer. docs/screens/fig8-trace-qa.jpg is an internal check picture (greyscale).
+- Footprint: 38.6 km2 of coloured grid is visible on the figure. The report states 52 km2. They disagree: the figure is a window on the survey (the grid runs off the top of the map frame at about N 3,660,350, and part is hidden by the legend and title block).
 
 ## Files
 
@@ -53,4 +65,8 @@ cd scripts
 ../.venv/bin/python fetch_public_vectors.py
 ../.venv/bin/python trace_fig2.py
 ../.venv/bin/python check_boundary.py
+../.venv/bin/python georef_fig8.py
+../.venv/bin/python estimate_plate2.py
 ```
+
+`data/processed/timeline.json` is written by hand (ten events). `data/processed/plate2.json` is updated by `estimate_plate2.py`.

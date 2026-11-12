@@ -1,0 +1,25 @@
+{
+  "layer": "plate2_view",
+  "source": "NI 43-101 Technical Report (effective 2026-06-30), Plate 2: Hot Breccia Drill Location Photo - Author, page 32",
+  "date": "report effective 2026-06-30; photo date not stated",
+  "datum": "WGS84 / UTM Zone 12N (EPSG:32612)",
+  "accuracy": "approximate viewpoint",
+  "verified": false,
+  "note": "The report does not give the photo position. This viewpoint is an estimate, NOT a surveyed point; equally good matches lie within about 128 m. The distant peaks in the photo are outside the terrain model, so the far skyline cannot match.",
+  "viewpoint": {
+    "easting": 526286,
+    "northing": 3653697,
+    "eye_height_m": 2,
+    "heading_deg": 82.0,
+    "pitch_deg": -4.7
+  },
+  "photo": "plate2-photo.jpg",
+  "photo_note": "White page margins cropped; otherwise unchanged.",
+  "estimated_horizontal_field_of_view_deg": 84.1,
+  "photo_size_px": [
+    1171,
+    652
+  ],
+  "estimate_method": "terrain search for a spot above the holes, looking east-southeast, where OC-1, OCC-8 and OCC-7 are visible and arranged as closely as possible to the photo",
+  "estimate_uncertainty_m": 128
+}

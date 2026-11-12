@@ -1,0 +1,18 @@
+{
+  "layer": "history_timeline",
+  "source": "NI 43-101 Technical Report, Hot Breccia Project, B.L. Laird P.Geo., effective 2026-06-30",
+  "note": "Event wording supplied by the project owner; section numbers looked up in the report text. Not reviewed by the Qualified Person.",
+  "verified": false,
+  "events": [
+    { "when": "1920s", "text": "Small workings on shear zones along dyke margins, mined for gold.", "sections": "6, 7.3", "view": "overview" },
+    { "when": "1970-1971", "text": "1970: Kennecott aeromagnetic survey. 1971: Kennecott IP survey.", "sections": "6", "view": "regional" },
+    { "when": "1972", "text": "Barrett mapping (1:12,000); claims staked by Bear Creek Mining; two IP lines.", "sections": "6, 7.2", "view": "property", "highlight": "boundary" },
+    { "when": "1974-1981", "text": "Seven holes drilled (OC and OCC series; Conoco joint venture 1979-81). OC-3 year unknown.", "sections": "6", "view": "holes", "highlight": "collars" },
+    { "when": "1990s", "text": "Kennecott furnished limited logs only; drill core discarded.", "sections": "6", "view": "holes_close" },
+    { "when": "2011", "text": "Walnut Mines staked the claims.", "sections": "6", "view": "property_west" },
+    { "when": "July 2023", "text": "Airborne ZTEM and magnetic survey (Geotech), 312 line-km.", "sections": "6", "view": "survey", "highlight": "ztem" },
+    { "when": "March 2024", "text": "Prismo surface sampling published; ExploreTech modelling.", "sections": "6", "view": "samples", "highlight": "report" },
+    { "when": "July 2024", "text": "BLM permit for ten drill sites.", "sections": "4, 6", "view": "trail" },
+    { "when": "Feb 2026", "text": "Independent QP site visit.", "sections": "2, 12", "view": "plate2" }
+  ]
+}
