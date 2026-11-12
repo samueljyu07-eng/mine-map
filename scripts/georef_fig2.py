@@ -4,7 +4,7 @@ Run: cd scripts && ../.venv/bin/python georef_fig2.py
 Method: find the dotted grid lines (520,000 and 525,000 mE; 3,650,000, 3,655,000 and 3,660,000 mN) to
 sub-pixel precision, use their six crossings as control points, and fit an affine transform
 (pixel -> UTM) by least squares. Residuals are printed for every control point.
-Outputs: data/processed/fig2_georef.json, fig2_overlay_r{row}c{col}.webp (check overlay for the viewer),
+Outputs: data/processed/fig2_georef.json, fig2_overlay_* (whole figure) and fig2_lines_* (main lines only) check overlays for the viewer,
          docs/screens/fig2-georef-check.jpg (figure linework over the NAIP imagery).
 """
 import json, datetime
@@ -49,20 +49,51 @@ pixel_m = float(np.hypot(ce[1], cn[1]))
 print(f"  RMS {rms:.2f} m, worst {max(r['residual_m'] for r in res):.2f} m. One figure pixel = {pixel_m:.1f} m, "
       f"so nothing traced from this figure can be better than about +/- {pixel_m:.0f} m.")
 
-# ---- Warp the figure onto the terrain box (inverse map: output pixel -> figure pixel) ----
+# ---- Warp the figure onto the terrain (inverse map: output pixel -> figure pixel) ----
+from PIL import ImageFilter, ImageDraw
 M = np.array([[ce[1], ce[2]], [cn[1], cn[2]]]); Minv = np.linalg.inv(M)
 def to_pixel(e, n): return Minv @ np.array([e - ce[0], n - cn[0]])
-SIZE = 4096; r = (E - W) / SIZE
-p0 = to_pixel(W + r / 2, N - r / 2); dx = Minv @ np.array([r, 0]); dy = Minv @ np.array([0, -r])
-rgba = np.dstack([im, np.where(np.abs(im - BG).sum(2) > 70, 255, 0)]).astype("uint8")
-rgba[:66, :, 3] = 0; rgba[1643:, :, 3] = 0; rgba[:, :63, 3] = 0; rgba[:, 1249:, 3] = 0   # outside the map frame
-rgba[1536:, :546, 3] = 0; rgba[1397:, 944:, 3] = 0                                        # legend and title block
-warped = Image.fromarray(rgba, "RGBA").transform((SIZE, SIZE), Image.AFFINE,
-                                                 (dx[0], dy[0], p0[0], dx[1], dy[1], p0[1]), resample=Image.BILINEAR)
+
+def frame_only(alpha):
+    alpha = alpha.copy()
+    alpha[:66] = 0; alpha[1643:] = 0; alpha[:, :63] = 0; alpha[:, 1249:] = 0   # outside the map frame
+    alpha[1536:, :546] = 0; alpha[1397:, 944:] = 0                               # legend and title block
+    return alpha
+
+# Full figure: everything that is not plain background.
+full = np.dstack([im, frame_only(np.where(np.abs(im - BG).sum(2) > 70, 255, 0))]).astype("uint8")
+
+# Lines only: keep the thick line features and recolour them so they stand out on the imagery.
+# Thin hatching and the thin claim grid are removed with a 3 x 3 "opening" (erode, then grow back).
+def opened(mask):
+    m = Image.fromarray((mask * 255).astype("uint8")).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
+    return np.asarray(m) > 0
+r_, g_, b_ = im[..., 0], im[..., 1], im[..., 2]
+LINE_CLASSES = [  # name, mask, display colour
+    ("highway (white road casing; also white label outlines)", (r_ > 238) & (g_ > 238) & (b_ > 238), (255, 225, 77)),
+    ("dark lines: access trail, inner outlines, labels", opened(im.sum(2) < 150), (255, 138, 0)),
+    ("Gila River", (b_ > 200) & (r_ < 130) & (b_ - r_ > 100), (41, 182, 255)),
+    ("property boundary and Christmas Mine pit outline", opened((r_ > 60) & (b_ > 40) & (g_ < 60) & (r_ - g_ > 50)), (255, 61, 242)),
+]
+lines = np.zeros(im.shape[:2] + (4,), "uint8")
+for _, mask, colour in LINE_CLASSES:
+    lines[mask] = (*colour, 255)
+lines[..., 3] = frame_only(lines[..., 3])
+
+def warp(rgba, w, e, s, n, width, height):
+    rx, ry = (e - w) / width, (n - s) / height
+    p0 = to_pixel(w + rx / 2, n - ry / 2); dx = Minv @ np.array([rx, 0]); dy = Minv @ np.array([0, -ry])
+    return Image.fromarray(rgba, "RGBA").transform((width, height), Image.AFFINE,
+                                                   (dx[0], dy[0], p0[0], dx[1], dy[1], p0[1]), resample=Image.BILINEAR)
+
+SIZE = 4096
 out = ROOT / "data/processed"
-for row in range(2):
-    for col in range(2):
-        warped.crop((col * 2048, row * 2048, (col + 1) * 2048, (row + 1) * 2048)).save(out / f"fig2_overlay_r{row}c{col}.webp", "WEBP", quality=80, method=6)
+for name, rgba in (("overlay", full), ("lines", lines)):
+    warped = warp(rgba, W, E, S, N, SIZE, SIZE)
+    for row in range(2):
+        for col in range(2):
+            warped.crop((col * 2048, row * 2048, (col + 1) * 2048, (row + 1) * 2048)).save(
+                out / f"fig2_{name}_r{row}c{col}.webp", "WEBP", quality=80, method=6)
 
 corners = [to_utm(63, 66), to_utm(1249, 66), to_utm(1249, 1643), to_utm(63, 1643)]
 meta = {
@@ -78,13 +109,28 @@ meta = {
 (out / "fig2_georef.json").write_text(json.dumps(meta, indent=2))
 print("map frame covers E %d-%d, N %d-%d" % (corners[0][0], corners[1][0], corners[2][1], corners[0][1]))
 
-# ---- 2D check picture: figure linework over NAIP ----
-base = Image.new("RGB", (2048, 2048))
-for row in range(2):
-    for col in range(2):
-        base.paste(Image.open(out / f"imagery_r{row}c{col}_2048.webp").resize((1024, 1024)), (col * 1024, row * 1024))
-ov = warped.resize((2048, 2048), Image.LANCZOS)
-ov.putalpha(ov.getchannel("A").point(lambda a: int(a * 0.75)))
-base.paste(ov, (0, 0), ov)
+# ---- Check pictures: figure lines over the 2025 NAIP imagery ----
+import rasterio
+from rasterio.windows import from_bounds as win_from_bounds
+naip = rasterio.open(sorted((ROOT / "data/raw/naip").glob("*_box_v2_*.tif"))[-1])
+def check_panel(title, w, e, s, n, px=900):
+    rgb = naip.read(window=win_from_bounds(w, s, e, n, naip.transform), out_shape=(3, px, px))
+    base = Image.fromarray(np.moveaxis(rgb, 0, -1)).convert("RGB")
+    ov = warp(lines, w, e, s, n, px, px)
+    left = base.copy(); right = base.copy(); right.paste(ov, (0, 0), ov)
+    sheet = Image.new("RGB", (px * 2 + 12, px + 44), (18, 22, 27))
+    sheet.paste(left, (0, 44)); sheet.paste(right, (px + 12, 44))
+    d = ImageDraw.Draw(sheet)
+    d.text((8, 6), f"{title}   |   left: 2025 aerial imagery only   |   right: same view with Fig 2 lines", fill=(255, 255, 255), font_size=18)
+    d.text((8, 26), f"E {w:,}-{e:,}   N {s:,}-{n:,}   ({(e - w) / 1000:.1f} km across)   magenta = boundary/pit, blue = river, yellow = highway, orange = trail and other dark lines",
+           fill=(190, 198, 206), font_size=13)
+    return sheet
+PANELS = [("1 Christmas Mine pit", 522300, 525100, 3656400, 3659200), ("2 Highway 77 and Gila River at the property", 524300, 526300, 3653300, 3655300),
+          ("3 Highway 77 through Winkelman", 519800, 522200, 3648900, 3651300), ("4 Access trail, south-east", 525500, 528000, 3649500, 3652000)]
 (ROOT / "docs/screens").mkdir(exist_ok=True)
+for title, w, e, s, n in PANELS:
+    check_panel(title, w, e, s, n).save(ROOT / f"docs/screens/fig2-check-{title[0]}.jpg", quality=88)
+whole = warp(lines, W, E, S, N, 2048, 2048)
+base = Image.fromarray(np.moveaxis(naip.read(out_shape=(3, 2048, 2048)), 0, -1)).convert("RGB")
+base.paste(whole, (0, 0), whole)
 base.save(ROOT / "docs/screens/fig2-georef-check.jpg", quality=85)

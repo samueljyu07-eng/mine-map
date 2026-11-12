@@ -97,7 +97,17 @@ const quadrants: { mesh: THREE.Mesh; imagery: THREE.MeshBasicMaterial }[] = [];
 let imageryOn = true;
 // Report Fig 2 draped on the terrain so its georeferencing can be checked by eye. Not a final layer.
 const fig2Group = new THREE.Group();
-const fig2Materials: THREE.MeshBasicMaterial[] = [];
+const fig2Materials: { mat: THREE.MeshBasicMaterial; lines: THREE.Texture | null; full: THREE.Texture | null }[] = [];
+function applyFig2() {
+  const linesOnly = $<HTMLInputElement>('t-fig2-lines').checked;
+  for (const f of fig2Materials) {
+    const tex = linesOnly ? f.lines : f.full;
+    f.mat.map = tex;
+    f.mat.visible = tex !== null;
+    f.mat.needsUpdate = true;
+  }
+  requestRender();
+}
 
 function applyImagery() {
   for (const q of quadrants) q.mesh.material = imageryOn && q.imagery.map ? q.imagery : hillMaterial;
@@ -114,18 +124,23 @@ function buildTerrain() {
       const mesh = new THREE.Mesh(terrain.buildQuadrant(row, col, lowPower ? 3 : 1), hillMaterial);
       world.add(mesh);
       quadrants.push({ mesh, imagery });
-      loader.load(`${BASE}fig2_overlay_r${row}c${col}.webp`, (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        const mat = new THREE.MeshBasicMaterial({
-          map: tex, transparent: true, opacity: Number($<HTMLInputElement>('fig2-opacity').value), depthWrite: false,
-          polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-        });
-        fig2Materials.push(mat);
-        const overlay = new THREE.Mesh(mesh.geometry, mat);
-        overlay.renderOrder = 1;
-        fig2Group.add(overlay);
-        requestRender();
+      // Two versions of the Fig 2 check overlay: recoloured main lines, and the whole figure.
+      const mat = new THREE.MeshBasicMaterial({
+        transparent: true, opacity: Number($<HTMLInputElement>('fig2-opacity').value), depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, visible: false,
       });
+      const overlay = new THREE.Mesh(mesh.geometry, mat);
+      overlay.renderOrder = 1;
+      fig2Group.add(overlay);
+      const entry = { mat, lines: null as THREE.Texture | null, full: null as THREE.Texture | null };
+      fig2Materials.push(entry);
+      for (const kind of ['lines', 'full'] as const) {
+        loader.load(`${BASE}fig2_${kind === 'lines' ? 'lines' : 'overlay'}_r${row}c${col}.webp`, (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          entry[kind] = tex;
+          applyFig2();
+        });
+      }
       const setMap = (tex: THREE.Texture) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -350,10 +365,18 @@ toggle('t-website', (on) => { websiteGroup.visible = on; });
 toggle('t-claims', (on) => { claimsGroup.visible = on; });
 toggle('t-fig2', (on) => { fig2Group.visible = on; });
 $<HTMLInputElement>('fig2-opacity').addEventListener('input', (e) => {
-  for (const m of fig2Materials) m.opacity = Number((e.target as HTMLInputElement).value);
+  for (const f of fig2Materials) f.mat.opacity = Number((e.target as HTMLInputElement).value);
   requestRender();
 });
 $('reset').addEventListener('click', resetView);
+$<HTMLInputElement>('t-fig2-lines').addEventListener('change', applyFig2);
+// Straight down with north at the top, like a paper map. Keeps the current centre and zoom.
+$('topdown').addEventListener('click', () => {
+  const dist = camera.position.distanceTo(controls.target);
+  camera.position.set(controls.target.x, controls.target.y + dist, controls.target.z + 0.01);
+  controls.update();
+  requestRender();
+});
 $<HTMLInputElement>('exag').addEventListener('input', (e) => {
   const next = Number((e.target as HTMLInputElement).value);
   controls.target.y = (controls.target.y / exaggeration) * next;
@@ -420,7 +443,7 @@ async function start() {
   buildTerrain();
   world.add(fig2Group);
   const fig2 = await getJson<GeorefFile>('fig2_georef.json');
-  $('m-fig2').textContent = `approximate · report Figure 2 placed using its printed UTM grid · grid fit RMS ${fig2.rms_m} m · 1 figure pixel = ${fig2.pixel_size_m} m`;
+  $('m-fig2').textContent = `approximate · report Figure 2 placed using its printed UTM grid · grid fit RMS ${fig2.rms_m} m · 1 figure pixel = ${fig2.pixel_size_m} m · magenta = boundary and pit, blue = river, yellow = highway, orange = trail and other dark lines`;
   buildCollars(collars);
   buildSamples(report, reportGroup, 'm-report');
   buildSamples(website, websiteGroup, 'm-website');
