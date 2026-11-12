@@ -1,0 +1,46 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "layer": "claims",
+    "placeholder": true,
+    "source": "NONE. Placeholder box drawn 250 m outside the sample points. NOT the claim boundary.",
+    "datum": "WGS84 / UTM Zone 12N",
+    "verified": false,
+    "processed": "2026-11-12"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "PLACEHOLDER - not the claim boundary"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              525415.0,
+              3652552.0
+            ],
+            [
+              527824.0,
+              3652552.0
+            ],
+            [
+              527824.0,
+              3654852.0
+            ],
+            [
+              525415.0,
+              3654852.0
+            ],
+            [
+              525415.0,
+              3652552.0
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
