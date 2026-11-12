@@ -18,3 +18,7 @@ venv/
 !.env.example
 .vscode/
 .idea/
+
+# Raw data: never edited, never committed
+data/raw/*
+!data/raw/.gitkeep
