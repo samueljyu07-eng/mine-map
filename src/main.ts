@@ -26,9 +26,10 @@ interface Collar {
   logged_to_m: number; verification_state: 'unitemized' | 'not_visited' | 'suspected_pad'; verification_text: string;
 }
 interface CollarsFile { source: string; datum: string; status: string; collars: Collar[] }
-interface ClaimsFile {
-  metadata: { placeholder: boolean; source: string; datum: string; verified: boolean };
-  features: { properties: { name?: string }; geometry: { type: string; coordinates: number[][][] | number[][][][] } }[];
+type Geometry = { type: string; coordinates?: unknown; geometries?: Geometry[] };
+interface TracedFile {
+  metadata: { georeferencing_error_m: number; independent_check: Record<string, { median_m: number; p90_m: number }> };
+  features: { properties: { kind: string; name: string; label: string; source: string; traced_area_km2?: number }; geometry: Geometry }[];
 }
 interface GeorefFile { source: string; rms_m: number; pixel_size_m: number; georeferencing_error_m: number }
 interface ImageryFile { acquisition_dates: string[]; acquisition_year: number; datum_source_horizontal: string; source: string }
@@ -97,6 +98,7 @@ const quadrants: { mesh: THREE.Mesh; imagery: THREE.MeshBasicMaterial }[] = [];
 let imageryOn = true;
 // Report Fig 2 draped on the terrain so its georeferencing can be checked by eye. Not a final layer.
 const fig2Group = new THREE.Group();
+fig2Group.visible = false;
 const fig2Materials: { mat: THREE.MeshBasicMaterial; lines: THREE.Texture | null; full: THREE.Texture | null }[] = [];
 function applyFig2() {
   const linesOnly = $<HTMLInputElement>('t-fig2-lines').checked;
@@ -124,6 +126,15 @@ function buildTerrain() {
       const mesh = new THREE.Mesh(terrain.buildQuadrant(row, col, lowPower ? 3 : 1), hillMaterial);
       world.add(mesh);
       quadrants.push({ mesh, imagery });
+      loader.load(`${BASE}fig2_zones_r${row}c${col}.webp`, (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const fill = new THREE.Mesh(mesh.geometry, new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+        }));
+        fill.renderOrder = 1;
+        zonesGroup.add(fill);
+        requestRender();
+      });
       // Two versions of the Fig 2 check overlay: recoloured main lines, and the whole figure.
       const mat = new THREE.MeshBasicMaterial({
         transparent: true, opacity: Number($<HTMLInputElement>('fig2-opacity').value), depthWrite: false,
@@ -291,59 +302,105 @@ function buildSampleLegend(files: SamplesFile[]) {
     + '<span><i class="mk qp"></i>QP check sample</span><span><i class="mk website" style="--c:#ccc"></i>square = website table</span>';
 }
 
-// ---------- Claims ----------
-const claimsGroup = new THREE.Group();
-world.add(claimsGroup);
+// ---------- Context layers: traced from report Fig 2, plus public reference lines ----------
+const boundaryGroup = new THREE.Group();
+const zonesGroup = new THREE.Group();
+const contextGroup = new THREE.Group();
+const resvGroup = new THREE.Group();
+world.add(zonesGroup, contextGroup, resvGroup, boundaryGroup);
 
-function buildClaims(file: ClaimsFile) {
-  const placeholder = file.metadata.placeholder;
-  const material = new LineMaterial({
-    color: placeholder ? 0xff4d9a : 0x4dd2ff, linewidth: 3, dashed: placeholder, dashSize: 60, gapSize: 40, depthTest: false,
-  });
-  let labelDone = false;
-  for (const f of file.features) {
-    const polys = (f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates]) as number[][][][];
-    for (const poly of polys) {
-      for (const ring of poly) {
-        // Drape the outline on the terrain: one point about every 10 m.
-        const pts: number[] = [];
-        for (let i = 0; i < ring.length - 1; i++) {
-          const [e0, n0] = ring[i];
-          const [e1, n1] = ring[i + 1];
-          const steps = Math.max(1, Math.ceil(Math.hypot(e1 - e0, n1 - n0) / 10));
-          for (let k = 0; k <= steps; k++) {
-            const e = e0 + ((e1 - e0) * k) / steps;
-            const n = n0 + ((n1 - n0) * k) / steps;
-            if (!terrain.inside(e, n)) continue;
-            const [x, z] = terrain.toWorld(e, n);
-            pts.push(x, terrain.heightAt(e, n) + 4, z);
-          }
-        }
-        if (pts.length < 6) continue;
-        const line = new Line2(new LineGeometry().setPositions(pts), material);
-        line.computeLineDistances();
-        line.renderOrder = 2;
-        claimsGroup.add(line);
-        if (placeholder && !labelDone) {
-          labelDone = true;
-          const north = Math.max(...ring.map((c) => c[1]));
-          const e = (Math.max(...ring.map((c) => c[0])) + Math.min(...ring.map((c) => c[0]))) / 2;
-          const el = document.createElement('div');
-          el.className = 'claims-label';
-          el.textContent = 'PLACEHOLDER: not the property boundary';
-          const label = new CSS2DObject(el);
-          label.center.set(0.5, 1);
-          const [x, z] = terrain.toWorld(e, north);
-          label.position.set(x, terrain.heightAt(e, north) + 4, z);
-          claimsGroup.add(label);
-        }
-      }
+const STYLE: Record<string, { colour: number; width: number; dashed?: boolean; group: THREE.Group; short: string; labelled?: boolean }> = {
+  property_boundary: { colour: 0xff3df2, width: 3.5, group: boundaryGroup, short: 'Property boundary', labelled: true },
+  zone_state_private: { colour: 0xff69b4, width: 1.5, group: zonesGroup, short: 'Overlapping State or Private lands' },
+  zone_legacy_placer_tunnel: { colour: 0x82d25a, width: 1.5, group: zonesGroup, short: 'Overlapping legacy Placer or Tunnel claims' },
+  pit_outline: { colour: 0xc38bff, width: 2.5, group: contextGroup, short: 'Christmas Mine pit extent', labelled: true },
+  access_trail: { colour: 0xff8a00, width: 2.5, group: contextGroup, short: 'Access trail', labelled: true },
+  gila_river: { colour: 0x29b6ff, width: 2.5, group: contextGroup, short: 'Gila River', labelled: true },
+  highway_77: { colour: 0xffe14d, width: 2.5, group: contextGroup, short: 'State Route 77', labelled: true },
+  san_carlos_reservation_boundary: { colour: 0xffffff, width: 2, dashed: true, group: resvGroup, short: 'San Carlos Reservation boundary', labelled: true },
+};
+const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
+
+/** Every line or ring in a GeoJSON geometry, as lists of [easting, northing]. */
+function lineParts(g: Geometry): number[][][] {
+  const c = g.coordinates as never;
+  switch (g.type) {
+    case 'LineString': return [c];
+    case 'MultiLineString': case 'Polygon': return c;
+    case 'MultiPolygon': return (c as number[][][][]).flat();
+    case 'GeometryCollection': return (g.geometries ?? []).flatMap(lineParts);
+    default: return [];
+  }
+}
+
+/** Drape a line on the terrain: one point about every 10 m, lifted slightly so it stays visible. */
+function drape(part: number[][], lift: number): number[] {
+  const pts: number[] = [];
+  for (let i = 0; i < part.length - 1; i++) {
+    const [e0, n0] = part[i];
+    const [e1, n1] = part[i + 1];
+    const steps = Math.max(1, Math.ceil(Math.hypot(e1 - e0, n1 - n0) / 10));
+    for (let k = i === 0 ? 0 : 1; k <= steps; k++) {
+      const e = e0 + ((e1 - e0) * k) / steps;
+      const n = n0 + ((n1 - n0) * k) / steps;
+      if (!terrain.inside(e, n)) continue;
+      const [x, z] = terrain.toWorld(e, n);
+      pts.push(x, terrain.heightAt(e, n) + lift, z);
     }
   }
-  $('l-claims').firstChild!.textContent = placeholder ? 'Property boundary (PLACEHOLDER)' : 'Property boundary';
-  $('m-claims').textContent = placeholder
-    ? 'Not traced yet. Dashed box drawn 250 m outside the plotted points. Not the property boundary.'
-    : `${file.metadata.source} · ${file.metadata.datum} · ${file.metadata.verified ? 'verified' : 'unverified'}`;
+  return pts;
+}
+
+function mapLabel(text: string, colour: number, e: number, n: number, group: THREE.Group, minor = true) {
+  const el = document.createElement('div');
+  el.className = `map-label${minor ? ' minor' : ''}`;
+  el.style.setProperty('--c', hex(colour));
+  el.textContent = text;
+  const label = new CSS2DObject(el);
+  label.center.set(0.5, 1.2);
+  const [x, z] = terrain.toWorld(e, n);
+  label.position.set(x, terrain.heightAt(e, n) + 6, z);
+  group.add(label);
+}
+
+function buildTraced(file: TracedFile) {
+  const err = file.metadata.georeferencing_error_m;
+  for (const f of file.features) {
+    const { kind, name } = f.properties;
+    if (kind === 'hayden_smelter_symbol') {
+      const [e, n] = f.geometry.coordinates as number[];
+      mapLabel('Hayden Smelter (symbol position on report Fig 2, approximate)', 0xffffff, e, n, contextGroup);
+      continue;
+    }
+    const st = STYLE[kind];
+    if (!st) continue;
+    const material = new LineMaterial({ color: st.colour, linewidth: st.width, dashed: !!st.dashed, dashSize: 60, gapSize: 40, depthTest: false });
+    let longest: number[][] = [];
+    for (const part of lineParts(f.geometry)) {
+      const pts = drape(part, 4);
+      if (pts.length < 6) continue;
+      const line = new Line2(new LineGeometry().setPositions(pts), material);
+      line.computeLineDistances();
+      line.renderOrder = 2;
+      st.group.add(line);
+      const inside = part.filter(([e, n]) => terrain.inside(e, n));
+      if (inside.length > longest.length) longest = inside;
+    }
+    if (st.labelled && longest.length) {
+      // Property label at the northern tip; other labels half-way along their longest piece.
+      const at = kind === 'property_boundary' ? longest.reduce((a, b) => (b[1] > a[1] ? b : a)) : longest[Math.floor(longest.length / 2)];
+      mapLabel(kind === 'property_boundary' ? `${name} (approximate, traced from report Fig 2)` : st.short, st.colour, at[0], at[1], st.group, kind !== 'property_boundary');
+    }
+  }
+  const area = file.features.find((f) => f.properties.kind === 'property_boundary')?.properties.traced_area_km2;
+  const chk = file.metadata.independent_check;
+  $('m-boundary').textContent = `approximate, traced from report Fig 2 · georeferencing error about ${err} m · traced area ${area} km² · WGS84 UTM 12N · unverified`;
+  $('m-zones').textContent = `approximate, traced from report Fig 2 (hatched areas) · georeferencing error about ${err} m · unverified`;
+  $('m-context').textContent = `River: USGS NHD. Highway: US Census TIGER. Pit outline, access trail and smelter symbol: approximate, traced from report Fig 2 (about ${err} m). The figure's highway sits a median ${chk.highway_vs_tiger.median_m} m from the TIGER line.`;
+  $('m-resv').textContent = 'US Census TIGER American Indian areas · public source, not traced from the figure · unverified';
+  const sw = (k: string, cls = '') => `<span><i class="sw ${cls}" style="--c:${hex(STYLE[k].colour)}"></i>${STYLE[k].short}</span>`;
+  $('g-zones').innerHTML = ['zone_state_private', 'zone_legacy_placer_tunnel'].map((k) => `<span><i class="fill" style="--c:${hex(STYLE[k].colour)}"></i>${STYLE[k].short}</span>`).join('');
+  $('g-context').innerHTML = ['gila_river', 'highway_77', 'access_trail', 'pit_outline'].map((k) => sw(k)).join('');
 }
 
 // ---------- Camera ----------
@@ -362,7 +419,10 @@ toggle('t-imagery', (on) => { imageryOn = on; applyImagery(); });
 toggle('t-collars', (on) => { collarsGroup.visible = on; });
 toggle('t-report', (on) => { reportGroup.visible = on; });
 toggle('t-website', (on) => { websiteGroup.visible = on; });
-toggle('t-claims', (on) => { claimsGroup.visible = on; });
+toggle('t-boundary', (on) => { boundaryGroup.visible = on; });
+toggle('t-zones', (on) => { zonesGroup.visible = on; });
+toggle('t-context', (on) => { contextGroup.visible = on; });
+toggle('t-resv', (on) => { resvGroup.visible = on; });
 toggle('t-fig2', (on) => { fig2Group.visible = on; });
 $<HTMLInputElement>('fig2-opacity').addEventListener('input', (e) => {
   for (const f of fig2Materials) f.mat.opacity = Number((e.target as HTMLInputElement).value);
@@ -436,9 +496,9 @@ async function start() {
   resize();
   terrain = await loadTerrain(BASE);
   const getJson = async <T>(name: string): Promise<T> => (await fetch(`${BASE}${name}`)).json();
-  const [collars, report, website, claims, imagery] = await Promise.all([
+  const [collars, report, website, traced, imagery] = await Promise.all([
     getJson<CollarsFile>('collars.json'), getJson<SamplesFile>('samples_report.json'), getJson<SamplesFile>('samples_website.json'),
-    getJson<ClaimsFile>('claims.json'), getJson<ImageryFile>('imagery.json'),
+    getJson<TracedFile>('fig2_traced.geojson'), getJson<ImageryFile>('imagery.json'),
   ]);
   buildTerrain();
   world.add(fig2Group);
@@ -448,12 +508,12 @@ async function start() {
   buildSamples(report, reportGroup, 'm-report');
   buildSamples(website, websiteGroup, 'm-website');
   buildSampleLegend([report, website]);
-  buildClaims(claims);
+  buildTraced(traced);
 
   const t = terrain.meta;
   $('m-imagery').textContent = `${imagery.source.replace('National Agriculture Imagery Program ', '')} · flown ${imagery.acquisition_dates.join(', ')} · ${imagery.datum_source_horizontal} · unverified`;
   $('m-terrain').textContent = `Terrain: ${t.source}, read ${t.retrieved} · ${t.datum_source_horizontal} · ${Math.round(t.lidar_1m_fraction * 100)}% from 1 m lidar, rest coarser · unverified`;
-  $('credits').textContent = `Terrain: USGS 3DEP. Imagery: USDA NAIP ${imagery.acquisition_year}. Drill holes and samples: historical and third-party data from the NI 43-101 report (effective 2026-06-30) and the Prismo Metals website, not verified by the QP unless marked as the QP check sample.`;
+  $('credits').textContent = `Terrain: USGS 3DEP. Imagery: USDA NAIP ${imagery.acquisition_year}. Drill holes and samples: historical and third-party data from the NI 43-101 report (effective 2026-06-30) and the Prismo Metals website, not verified by the QP unless marked as the QP check sample. Boundary, zones, pit outline and trail: approximate, traced from report Fig 2. River: USGS NHD. Highway and reservation boundary: US Census TIGER.`;
 
   // Home view: from the south-west, looking at the middle of the drill holes.
   const ce = collars.collars.reduce((a, c) => a + c.easting, 0) / collars.collars.length;

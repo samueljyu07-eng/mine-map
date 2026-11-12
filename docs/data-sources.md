@@ -13,8 +13,19 @@ Terrain box: E 518,000-530,000, N 3,649,000-3,661,000.
 | Historical drill holes (7) | NI 43-101 Technical Report, Hot Breccia Project, B.L. Laird P.Geo., effective 2026-06-30, Table 3 (via collars.csv) | Drilled 1974-1981 | Blade Resources report | Collars to the nearest metre | WGS84 / UTM 12N | Exact as tabulated; traces ASSUMED vertical (no downhole surveys) | No. Historical, not verified by the QP |
 | Surface samples, report (30 + 1) | Same report, Table 4 (Prismo, March 2024) and QP check sample HBLR-01 (Feb 2026, ALS) (via samples.csv) | March 2024; Feb 2026 | Blade Resources report | Points to the nearest metre | WGS84 / UTM 12N | Exact as tabulated | Prismo: no. HBLR-01 is the QP's own check sample |
 | Surface samples, website (17) | Prismo Metals website table, https://prismometals.com/project/the-hot-breccia-property/ | 1989, 2023, undated; page read 2026-11-12 | Copyright Prismo Metals; permission NOT confirmed | Points to the nearest metre | WGS84 stated; **UTM Zone 12N assumed** | Exact as published, zone assumed | No. Historical/vendor data |
-| Property boundary | **None yet. PLACEHOLDER box** 250 m outside the plotted points | Generated 2026-11-12 | n/a | n/a | WGS84 / UTM 12N | Placeholder | No |
-| Report figures (Fig 2, Fig 8, Plate 2) | Extracted from the report PDF, pages 19, 33, 32 | Report effective 2026-06-30 | Blade Resources report | 1314 x 1700 px (Plate 2: 1314 x 652) | Fig 2 and Fig 8 state "WGS84 Zone 12N" | Not yet georeferenced | No |
+| Property boundary | Traced from report Figure 2 (Claim Map), thick purple outline | Report effective 2026-06-30; traced 2026-11-12 | Blade Resources report | Figure pixel 8.2 m | WGS84 / UTM 12N (as printed on the figure) | **Approximate, traced from report Fig 2.** Georeferencing error about 8 m (grid fit RMS 2.2 m); inlet detail uncertain to about 100 m | No |
+| Claim overlap zones (State or Private lands; legacy Placer or Tunnel claims) | Traced from report Figure 2, hatched areas | as above | Blade Resources report | Figure pixel 8.2 m | WGS84 / UTM 12N | Approximate, traced from report Fig 2 | No |
+| Christmas Mine pit extent, access trail, Hayden smelter symbol | Traced from report Figure 2 | as above | Blade Resources report | Figure pixel 8.2 m | WGS84 / UTM 12N | Approximate, traced from report Fig 2. Trail is the printed dashes only. Smelter symbol position is doubtful (open question 20) | No |
+| Gila River | USGS National Hydrography Dataset (NHD) flowlines, hydro.nationalmap.gov | Downloaded 2026-11-12 | US Government work, public domain | Large-scale (1:24,000 class) | NAD83 geographic | Exact per source (not traced) | No |
+| State Route 77 | US Census Bureau TIGER/Line roads (TIGERweb) | Downloaded 2026-11-12 | US Government work, public domain | TIGER accuracy (typically within about 10 m) | NAD83 geographic | Exact per source (not traced) | No |
+| San Carlos Reservation boundary | US Census Bureau TIGER/Line American Indian areas (TIGERweb) | Downloaded 2026-11-12 | US Government work, public domain | TIGER accuracy; a statistical boundary, not a legal survey | NAD83 geographic | Exact per source (Fig 2 shows a text label only, no line) | No |
+| Report figures (Fig 2, Fig 8, Plate 2) | Extracted from the report PDF, pages 19, 33, 32 | Report effective 2026-06-30 | Blade Resources report | 1314 x 1700 px (Plate 2: 1314 x 652) | Fig 2 and Fig 8 state "WGS84 Zone 12N" | Fig 2 georeferenced (below); Fig 8 not yet | No |
+
+## Fig 2 georeferencing
+
+- Control points: the six crossings of the printed UTM grid lines. Residuals 1.6 to 3.1 m, RMS 2.2 m. One figure pixel is 8.2 m.
+- Independent check against public lines: the figure's highway sits a median 19 m (90% within 38 m) from the TIGER road line; the figure's river a median 19 m (90% within 51 m) from the NHD line.
+- The powerline is not drawn on Fig 2, so it is not traced.
 
 ## Files
 
@@ -38,4 +49,8 @@ cd scripts
 ../.venv/bin/python build_terrain.py
 ../.venv/bin/python build_imagery.py
 ../.venv/bin/python build_layers.py
+../.venv/bin/python georef_fig2.py
+../.venv/bin/python fetch_public_vectors.py
+../.venv/bin/python trace_fig2.py
+../.venv/bin/python check_boundary.py
 ```

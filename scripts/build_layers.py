@@ -4,7 +4,6 @@ Run: .venv/bin/python scripts/build_layers.py
 collars:          data/raw/collars.csv                  -> data/processed/collars.json
 report samples:   data/raw/samples.csv                  -> data/processed/samples_report.json
 website samples:  data/raw/prismo_website/samples.csv   -> data/processed/samples_website.json
-claims:           PLACEHOLDER box until the property boundary is traced from report Fig 2 (Phase 2)
 Sample values are kept as text, exactly as written in the source files.
 """
 import csv, json, datetime
@@ -115,16 +114,5 @@ c = collars[0]; lon, lat = to_ll.transform(c["easting"], c["northing"]); e2, n2 
 print(f"\nUTM ROUND TRIP  {c['id']}: E {c['easting']:.0f} N {c['northing']:.0f} -> {lat:.5f} N, {abs(lon):.5f} W -> E {e2:.3f} N {n2:.3f}")
 print(f"  distance from 33.03 N, 110.75 W: {np.hypot((lat-33.03)*110900, (lon+110.75)*93400)/1000:.1f} km")
 
-# ---------------- Claims placeholder ----------------
-pts = [(p["easting"], p["northing"]) for p in collars + rep + web]
-pad = 250
-w, e = min(p[0] for p in pts) - pad, max(p[0] for p in pts) + pad
-s_, n = min(p[1] for p in pts) - pad, max(p[1] for p in pts) + pad
-(OUT / "claims.json").write_text(json.dumps({"type": "FeatureCollection",
-    "metadata": {"layer": "claims", "placeholder": True, "accuracy": "placeholder",
-                 "source": "NONE. Placeholder box drawn 250 m outside the plotted points. NOT the property boundary.",
-                 "datum": "WGS84 / UTM Zone 12N", "verified": False, "processed": today},
-    "features": [{"type": "Feature", "properties": {"name": "PLACEHOLDER - not the property boundary"},
-                  "geometry": {"type": "Polygon", "coordinates": [[[w, s_], [e, s_], [e, n], [w, n], [w, s_]]]}}]}, indent=2))
 print(f"\nAll {len(collars)} collars, {len(rep)} report samples and {len(web)} website samples are inside the terrain.")
 print("FLAGS:", *(problems or ["none"]), sep="\n  ")

@@ -99,6 +99,11 @@ button:hover { background: rgba(255, 255, 255, 0.18); }
 .pin.active .mk { box-shadow: 0 0 0 3px var(--accent); }
 #labels.far .pin:not(.collar) .pin-label { display: none; }
 #labels.vfar .pin-label { display: none; }
+.map-label { padding: 1px 6px; font-size: 11px; font-weight: 600; color: #fff; background: rgba(10, 12, 15, 0.72); border-left: 3px solid var(--c, #fff); border-radius: 3px; white-space: nowrap; }
+#labels.vfar .map-label.minor { display: none; }
+.legend i.sw { width: 16px; height: 0; border-top: 3px solid var(--c); }
+.legend i.sw.dash { border-top-style: dashed; }
+.legend i.fill { width: 12px; height: 12px; background: var(--c); border: 1px solid rgba(255,255,255,0.5); }
 .claims-label { padding: 2px 8px; font-size: 11px; font-weight: 700; color: #fff; background: #c2185b;
   border-radius: 4px; white-space: nowrap; }
 #info table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 12px; }
