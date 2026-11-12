@@ -522,8 +522,11 @@ function highlight(key: TimelineEvent['highlight']) {
   mats.forEach((m) => { m.linewidth *= 1.8; });
   const pins = key === 'collars' ? '.pin.collar' : key === 'report' ? '.pin.prismo, .pin.qp_check' : null;
   const mark = (on: boolean) => { if (pins) document.querySelectorAll(pins).forEach((el) => el.classList.toggle('hl', on)); };
-  requestAnimationFrame(() => requestAnimationFrame(() => mark(true))); // after the pins are drawn
+  let active = true;
+  // Mark the pins once they are on screen; do nothing if this stop has already been left.
+  setTimeout(() => { if (active) mark(true); }, 150);
   undoHighlight = () => {
+    active = false;
     mats.forEach((m, i) => { m.linewidth = widths[i]; });
     mark(false);
     if (!wasOn && input.checked) input.click();
