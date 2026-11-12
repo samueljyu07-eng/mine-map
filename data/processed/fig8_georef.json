@@ -1,0 +1,115 @@
+{
+  "layer": "fig8_georeference",
+  "source": "NI 43-101 Technical Report (effective 2026-06-30), Figure 8: Resistivity Depth Slice with Permitted Drill Sites, page 33",
+  "datum": "WGS84 / UTM Zone 12N (as printed on the figure)",
+  "accuracy": "approximate",
+  "method": "similarity fit to 2 printed grid crossings and the historical drill site symbols (coordinates from report Table 3)",
+  "pixel_to_utm": {
+    "a": 5.739463415938442,
+    "b": -0.005562178400678991,
+    "c": 521151.72449872113,
+    "d": 3660731.5439135805,
+    "form": "E = a*px + b*py + c ; N = b*px - a*py + d"
+  },
+  "control_points": [
+    {
+      "name": "grid 525,000 E / 3,660,000 N",
+      "pixel": [
+        670.3,
+        127.8
+      ],
+      "easting": 525000.0,
+      "northing": 3660000.0,
+      "residual_m": 6.1
+    },
+    {
+      "name": "grid 525,000 E / 3,655,000 N",
+      "pixel": [
+        670.3,
+        995.9
+      ],
+      "easting": 525000.0,
+      "northing": 3655000.0,
+      "residual_m": 13.8
+    },
+    {
+      "name": "drill site symbol OC-1 (dark ring (symbol partly covered))",
+      "pixel": [
+        991.1,
+        1217.2
+      ],
+      "easting": 526837.0,
+      "northing": 3653738.0,
+      "residual_m": 4.2
+    },
+    {
+      "name": "drill site symbol OC-2 (dark ring (symbol partly covered))",
+      "pixel": [
+        850.9,
+        1210.2
+      ],
+      "easting": 526028.0,
+      "northing": 3653775.0,
+      "residual_m": 6.1
+    },
+    {
+      "name": "drill site symbol OC-3 (green fill)",
+      "pixel": [
+        1027.9,
+        1178.0
+      ],
+      "easting": 527082.0,
+      "northing": 3653977.0,
+      "residual_m": 39.3
+    },
+    {
+      "name": "drill site symbol OC-5 (green fill)",
+      "pixel": [
+        810.7,
+        1146.4
+      ],
+      "easting": 525807.0,
+      "northing": 3654144.0,
+      "residual_m": 9.4
+    },
+    {
+      "name": "drill site symbol OCC-6 (dark ring (symbol partly covered))",
+      "pixel": [
+        990.9,
+        1186.6
+      ],
+      "easting": 526790.0,
+      "northing": 3653907.0,
+      "residual_m": 43.0
+    },
+    {
+      "name": "drill site symbol OCC-7 (dark ring (symbol partly covered))",
+      "pixel": [
+        1024.2,
+        1248.8
+      ],
+      "easting": 527016.0,
+      "northing": 3653583.0,
+      "residual_m": 25.6
+    },
+    {
+      "name": "drill site symbol OCC-8 (dark ring (symbol partly covered))",
+      "pixel": [
+        998.2,
+        1241.4
+      ],
+      "easting": 526866.0,
+      "northing": 3653590.0,
+      "residual_m": 13.5
+    }
+  ],
+  "rms_m": 22.6,
+  "pixel_size_m": 5.74,
+  "georeferencing_error_m": 22.6,
+  "independent_check_highway_vs_tiger": {
+    "median_m": 29.7,
+    "p90_m": 46.5
+  },
+  "verified": false,
+  "processed": "2026-11-12"
+}

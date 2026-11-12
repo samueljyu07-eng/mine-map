@@ -31,6 +31,9 @@ interface TracedFile {
   metadata: { georeferencing_error_m: number; independent_check: Record<string, { median_m: number; p90_m: number }> };
   features: { properties: { kind: string; name: string; label: string; source: string; traced_area_km2?: number }; geometry: Geometry }[];
 }
+interface ZtemFile extends Omit<TracedFile, 'metadata'> {
+  metadata: { georeferencing_error_m: number; footprint_area_km2: number; report_stated_area_km2: number };
+}
 interface GeorefFile { source: string; rms_m: number; pixel_size_m: number; georeferencing_error_m: number }
 interface ImageryFile { acquisition_dates: string[]; acquisition_year: number; datum_source_horizontal: string; source: string }
 
@@ -307,7 +310,9 @@ const boundaryGroup = new THREE.Group();
 const zonesGroup = new THREE.Group();
 const contextGroup = new THREE.Group();
 const resvGroup = new THREE.Group();
-world.add(zonesGroup, contextGroup, resvGroup, boundaryGroup);
+const ztemGroup = new THREE.Group();
+ztemGroup.visible = false;
+world.add(zonesGroup, contextGroup, resvGroup, ztemGroup, boundaryGroup);
 
 const STYLE: Record<string, { colour: number; width: number; dashed?: boolean; group: THREE.Group; short: string; labelled?: boolean }> = {
   property_boundary: { colour: 0xff3df2, width: 3.5, group: boundaryGroup, short: 'Property boundary', labelled: true },
@@ -317,6 +322,8 @@ const STYLE: Record<string, { colour: number; width: number; dashed?: boolean; g
   access_trail: { colour: 0xff8a00, width: 2.5, group: contextGroup, short: 'Access trail', labelled: true },
   gila_river: { colour: 0x29b6ff, width: 2.5, group: contextGroup, short: 'Gila River', labelled: true },
   highway_77: { colour: 0xffe14d, width: 2.5, group: contextGroup, short: 'State Route 77', labelled: true },
+  ztem_footprint: { colour: 0x00e5ff, width: 2.5, dashed: true, group: ztemGroup, short: 'Approximate ZTEM survey footprint (report Fig 8)', labelled: true },
+  ztem_flight_line: { colour: 0x9be7ff, width: 1.5, group: ztemGroup, short: 'Flight line', labelled: true },
   san_carlos_reservation_boundary: { colour: 0xffffff, width: 2, dashed: true, group: resvGroup, short: 'San Carlos Reservation boundary', labelled: true },
 };
 const hex = (c: number) => `#${c.toString(16).padStart(6, '0')}`;
@@ -363,8 +370,7 @@ function mapLabel(text: string, colour: number, e: number, n: number, group: THR
   group.add(label);
 }
 
-function buildTraced(file: TracedFile) {
-  const err = file.metadata.georeferencing_error_m;
+function buildTraced(file: TracedFile | ZtemFile) {
   for (const f of file.features) {
     const { kind, name } = f.properties;
     if (kind === 'hayden_smelter_symbol') {
@@ -388,10 +394,17 @@ function buildTraced(file: TracedFile) {
     }
     if (st.labelled && longest.length) {
       // Property label at the northern tip; other labels half-way along their longest piece.
-      const at = kind === 'property_boundary' ? longest.reduce((a, b) => (b[1] > a[1] ? b : a)) : longest[Math.floor(longest.length / 2)];
-      mapLabel(kind === 'property_boundary' ? `${name} (approximate, traced from report Fig 2)` : st.short, st.colour, at[0], at[1], st.group, kind !== 'property_boundary');
+      const at = kind === 'property_boundary' ? longest.reduce((a, b) => (b[1] > a[1] ? b : a))
+        : kind === 'ztem_flight_line' ? longest.reduce((a, b) => (b[1] < a[1] ? b : a))
+        : longest[Math.floor(longest.length / 2)];
+      const text = kind === 'property_boundary' ? `${name} (approximate, traced from report Fig 2)` : kind === 'ztem_flight_line' ? name : st.short;
+      mapLabel(text, st.colour, at[0], at[1], st.group, kind !== 'property_boundary');
     }
   }
+}
+
+function describeTraced(file: TracedFile) {
+  const err = file.metadata.georeferencing_error_m;
   const area = file.features.find((f) => f.properties.kind === 'property_boundary')?.properties.traced_area_km2;
   const chk = file.metadata.independent_check;
   $('m-boundary').textContent = `approximate, traced from report Fig 2 · georeferencing error about ${err} m · traced area ${area} km² · WGS84 UTM 12N · unverified`;
@@ -423,6 +436,7 @@ toggle('t-boundary', (on) => { boundaryGroup.visible = on; });
 toggle('t-zones', (on) => { zonesGroup.visible = on; });
 toggle('t-context', (on) => { contextGroup.visible = on; });
 toggle('t-resv', (on) => { resvGroup.visible = on; });
+toggle('t-ztem', (on) => { ztemGroup.visible = on; });
 toggle('t-fig2', (on) => { fig2Group.visible = on; });
 $<HTMLInputElement>('fig2-opacity').addEventListener('input', (e) => {
   for (const f of fig2Materials) f.mat.opacity = Number((e.target as HTMLInputElement).value);
@@ -509,6 +523,10 @@ async function start() {
   buildSamples(website, websiteGroup, 'm-website');
   buildSampleLegend([report, website]);
   buildTraced(traced);
+  describeTraced(traced);
+  const ztem = await getJson<ZtemFile>('fig8_traced.geojson');
+  buildTraced(ztem);
+  $('m-ztem').textContent = `approximate, traced from report Fig 8 · georeferencing error about ${ztem.metadata.georeferencing_error_m} m · grid extent visible on the figure ${ztem.metadata.footprint_area_km2} km² (report states ${ztem.metadata.report_stated_area_km2} km² surveyed) · lines are the select lines shown in report Fig 8 · no survey results shown · unverified`;
 
   const t = terrain.meta;
   $('m-imagery').textContent = `${imagery.source.replace('National Agriculture Imagery Program ', '')} · flown ${imagery.acquisition_dates.join(', ')} · ${imagery.datum_source_horizontal} · unverified`;
