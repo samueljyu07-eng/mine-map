@@ -30,6 +30,7 @@ interface ClaimsFile {
   metadata: { placeholder: boolean; source: string; datum: string; verified: boolean };
   features: { properties: { name?: string }; geometry: { type: string; coordinates: number[][][] | number[][][][] } }[];
 }
+interface GeorefFile { source: string; rms_m: number; pixel_size_m: number; georeferencing_error_m: number }
 interface ImageryFile { acquisition_dates: string[]; acquisition_year: number; datum_source_horizontal: string; source: string }
 
 // Colour = sample TYPE only (never a value). Colour-blind-safe palette.
@@ -94,6 +95,9 @@ controls.addEventListener('change', requestRender);
 const hillMaterial = new THREE.MeshLambertMaterial({ color: 0xb8ab97 });
 const quadrants: { mesh: THREE.Mesh; imagery: THREE.MeshBasicMaterial }[] = [];
 let imageryOn = true;
+// Report Fig 2 draped on the terrain so its georeferencing can be checked by eye. Not a final layer.
+const fig2Group = new THREE.Group();
+const fig2Materials: THREE.MeshBasicMaterial[] = [];
 
 function applyImagery() {
   for (const q of quadrants) q.mesh.material = imageryOn && q.imagery.map ? q.imagery : hillMaterial;
@@ -110,6 +114,18 @@ function buildTerrain() {
       const mesh = new THREE.Mesh(terrain.buildQuadrant(row, col, lowPower ? 3 : 1), hillMaterial);
       world.add(mesh);
       quadrants.push({ mesh, imagery });
+      loader.load(`${BASE}fig2_overlay_r${row}c${col}.webp`, (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const mat = new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, opacity: Number($<HTMLInputElement>('fig2-opacity').value), depthWrite: false,
+          polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+        });
+        fig2Materials.push(mat);
+        const overlay = new THREE.Mesh(mesh.geometry, mat);
+        overlay.renderOrder = 1;
+        fig2Group.add(overlay);
+        requestRender();
+      });
       const setMap = (tex: THREE.Texture) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -332,6 +348,11 @@ toggle('t-collars', (on) => { collarsGroup.visible = on; });
 toggle('t-report', (on) => { reportGroup.visible = on; });
 toggle('t-website', (on) => { websiteGroup.visible = on; });
 toggle('t-claims', (on) => { claimsGroup.visible = on; });
+toggle('t-fig2', (on) => { fig2Group.visible = on; });
+$<HTMLInputElement>('fig2-opacity').addEventListener('input', (e) => {
+  for (const m of fig2Materials) m.opacity = Number((e.target as HTMLInputElement).value);
+  requestRender();
+});
 $('reset').addEventListener('click', resetView);
 $<HTMLInputElement>('exag').addEventListener('input', (e) => {
   const next = Number((e.target as HTMLInputElement).value);
@@ -397,6 +418,9 @@ async function start() {
     getJson<ClaimsFile>('claims.json'), getJson<ImageryFile>('imagery.json'),
   ]);
   buildTerrain();
+  world.add(fig2Group);
+  const fig2 = await getJson<GeorefFile>('fig2_georef.json');
+  $('m-fig2').textContent = `approximate · report Figure 2 placed using its printed UTM grid · grid fit RMS ${fig2.rms_m} m · 1 figure pixel = ${fig2.pixel_size_m} m`;
   buildCollars(collars);
   buildSamples(report, reportGroup, 'm-report');
   buildSamples(website, websiteGroup, 'm-website');

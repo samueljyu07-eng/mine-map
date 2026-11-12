@@ -1,0 +1,99 @@
+{
+  "layer": "fig2_georeference",
+  "source": "NI 43-101 Technical Report (effective 2026-06-30), Figure 2: Claim Map, page 19",
+  "datum": "WGS84 / UTM Zone 12N (as printed on the figure)",
+  "accuracy": "approximate",
+  "method": "affine fit to the six crossings of the UTM grid lines printed on the figure",
+  "pixel_to_utm": {
+    "easting": [
+      517744.62351772405,
+      8.223576713282775,
+      2.5302591764901493e-13
+    ],
+    "northing": [
+      3661684.586753591,
+      6.154445245272834e-13,
+      -8.227470828126188
+    ],
+    "form": "value = c0 + c1*px + c2*py"
+  },
+  "control_points": [
+    {
+      "pixel": [
+        274.26,
+        204.56
+      ],
+      "easting": 520000,
+      "northing": 3660000,
+      "residual_m": 1.56
+    },
+    {
+      "pixel": [
+        274.26,
+        812.85
+      ],
+      "easting": 520000,
+      "northing": 3655000,
+      "residual_m": 3.12
+    },
+    {
+      "pixel": [
+        274.26,
+        1420.0
+      ],
+      "easting": 520000,
+      "northing": 3650000,
+      "residual_m": 1.56
+    },
+    {
+      "pixel": [
+        882.27,
+        204.56
+      ],
+      "easting": 525000,
+      "northing": 3660000,
+      "residual_m": 1.56
+    },
+    {
+      "pixel": [
+        882.27,
+        812.85
+      ],
+      "easting": 525000,
+      "northing": 3655000,
+      "residual_m": 3.12
+    },
+    {
+      "pixel": [
+        882.27,
+        1420.0
+      ],
+      "easting": 525000,
+      "northing": 3650000,
+      "residual_m": 1.56
+    }
+  ],
+  "rms_m": 2.21,
+  "pixel_size_m": 8.22,
+  "georeferencing_error_m": 8.2,
+  "map_frame_utm": [
+    [
+      518263,
+      3661142
+    ],
+    [
+      528016,
+      3661142
+    ],
+    [
+      528016,
+      3648167
+    ],
+    [
+      518263,
+      3648167
+    ]
+  ],
+  "verified": false,
+  "processed": "2026-11-12"
+}
