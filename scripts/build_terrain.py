@@ -3,10 +3,11 @@ Run: .venv/bin/python scripts/build_terrain.py
 
 Inputs (data/raw, never edited):
   usgs_3dep_1m/*.tif            USGS 1 m lidar DEM tiles, NAD83 / UTM 12N (EPSG:26912), NAVD88 heights
+  usgs_3dep_1m_clips/*.tif      box-sized clips of further 1 m lidar tiles, read at their 4 m overview
   usgs_3dep_service/*.tif       USGS 3DEP "best available" service export at 5 m, used ONLY where 1 m lidar is missing
 Outputs (data/processed):
-  terrain_10m_u16.bin           900 x 900 grid, uint16 little-endian, value = elevation in decimetres, row 0 = north
-  terrain_source_u8.bin         900 x 900, 1 = 1 m lidar, 2 = gap fill from the 3DEP service
+  terrain_10m_u16.bin           1200 x 1200 grid, uint16 little-endian, value = elevation in decimetres, row 0 = north
+  terrain_source_u8.bin         1200 x 1200, 1 = 1 m lidar, 2 = gap fill from the 3DEP service
   terrain.json                  metadata
 """
 import json, pathlib, datetime
@@ -14,12 +15,10 @@ import numpy as np, rasterio
 from rasterio.windows import from_bounds
 from rasterio.enums import Resampling
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-W, E, S, N = 521000, 530000, 3649000, 3658000
-CELL = 10
+from config import ROOT, W, E, S, N, CELL
 NX, NY = (E - W) // CELL, (N - S) // CELL
 # Newest lidar collection first; later files only fill cells still empty.
-PRIORITY = ["AZ_USFSR3_D23", "AZ_Eastern_D24", "CA_AZ_FEMA_R9_Lidar_2017_D18"]
+PRIORITY = ["AZ_USFSR3_D23", "AZ_Eastern_D24", "AZ_NorthCentral_B23", "CA_AZ_FEMA_R9_Lidar_2017_D18"]
 
 def read_box(path):
     with rasterio.open(path) as d:
@@ -33,14 +32,16 @@ height = np.full((NY, NX), np.nan, "float32")
 source = np.zeros((NY, NX), "uint8")
 used = []
 for proj in PRIORITY:
-    for f in sorted((ROOT / "data/raw/usgs_3dep_1m").glob(f"*{proj}.tif")):
+    files = sorted((ROOT / "data/raw/usgs_3dep_1m").glob(f"*{proj}.tif")) + \
+            sorted((ROOT / "data/raw/usgs_3dep_1m_clips").glob(f"*{proj}_boxclip_4m.tif"))
+    for f in files:
         a = read_box(f)
         a[(a < -100) | (a > 5000)] = np.nan
         take = np.isnan(height) & ~np.isnan(a)
         height[take] = a[take]; source[take] = 1
-        used.append({"file": f.name, "cells_used": int(take.sum())})
+        if take.any(): used.append({"file": f.name, "cells_used": int(take.sum())})
 
-fill_path = ROOT / "data/raw/usgs_3dep_service/3dep_best_available_5m_box.tif"
+fill_path = ROOT / "data/raw/usgs_3dep_service/3dep_best_available_5m_box_v2.tif"
 fill = read_box(fill_path)
 both = (source == 1) & ~np.isnan(fill)
 diff = height[both] - fill[both]
@@ -69,7 +70,7 @@ meta = {
     "gap_fill_fraction": float((source == 2).mean()),
     "retrieved": "2026-11-12",
     "licence": "US Government work, public domain",
-    "verified": False,
+    "verified": False, "accuracy": "exact (measured data, resampled to 10 m)",
     "processed": datetime.date.today().isoformat(),
 }
 (out / "terrain.json").write_text(json.dumps(meta, indent=2))

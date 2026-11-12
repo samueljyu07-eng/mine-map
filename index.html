@@ -15,16 +15,20 @@
         <p>3D walkthrough · Blade Resources (CSE: AZCU)</p>
       </header>
 
-      <section id="panel" aria-label="Map controls">
-        <h2>Layers</h2>
+      <details id="panel" open aria-label="Map controls">
+        <summary>Layers and controls</summary>
         <label class="layer"><input type="checkbox" id="t-imagery" checked /><span>Aerial imagery<small id="m-imagery"></small></span></label>
-        <label class="layer"><input type="checkbox" id="t-samples" checked /><span>Surface samples<small id="m-samples"></small></span></label>
+        <label class="layer"><input type="checkbox" id="t-collars" checked /><span>Historical drill holes<small id="m-collars"></small></span></label>
+        <div class="legend" id="g-collars"></div>
+        <label class="layer"><input type="checkbox" id="t-report" checked /><span>Surface samples (report)<small id="m-report"></small></span></label>
+        <div class="legend" id="g-report"></div>
+        <label class="layer"><input type="checkbox" id="t-website" /><span>Surface samples (Prismo website)<small id="m-website"></small></span></label>
         <label class="layer"><input type="checkbox" id="t-claims" checked /><span id="l-claims">Claims<small id="m-claims"></small></span></label>
         <p class="layer-note" id="m-terrain"></p>
         <h2>Vertical exaggeration</h2>
         <div class="row"><input type="range" id="exag" min="1" max="3" step="0.5" value="1" aria-label="Vertical exaggeration" /><output id="exag-val">1×</output></div>
         <button id="reset" type="button">Reset view</button>
-      </section>
+      </details>
 
       <div id="exag-badge" hidden></div>
 
@@ -46,16 +50,9 @@
 
       <div id="disclaimer" role="dialog" aria-modal="true" aria-labelledby="disc-title">
         <div class="disc-card">
-          <p class="disc-flag">DRAFT disclaimer: placeholder wording, not reviewed by the Qualified Person</p>
-          <h2 id="disc-title">Before you open the model</h2>
-          <p>This 3D model is a draft visualisation of the Hot Breccia project area. It is for general information only.</p>
-          <ul>
-            <li>Terrain and aerial imagery are public US government data (USGS 3DEP, USDA NAIP).</li>
-            <li>Surface sample results are historical/vendor data from the Prismo Metals website. They have not been verified by the QP. Selected samples are not representative.</li>
-            <li>The claims outline is a PLACEHOLDER. It is not the claim boundary.</li>
-            <li>Nothing in this model is investment advice.</li>
-          </ul>
-          <button id="disc-ok" type="button">I understand</button>
+          <h2 id="disc-title">Disclaimer</h2>
+          <div id="disc-text"></div>
+          <button id="disc-ok" type="button">Continue</button>
         </div>
       </div>
     </div>

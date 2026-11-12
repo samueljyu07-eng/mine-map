@@ -2,36 +2,40 @@
 
 Last updated: 2026-11-12. Status of everything on this page: **DRAFT, not reviewed by the Qualified Person.**
 
-Project frame: UTM Zone 12N, metres, WGS84. Elevation is metres above sea level. Terrain box: E 521,000-530,000, N 3,649,000-3,658,000.
+Project frame: WGS84 / UTM Zone 12N (EPSG:32612), metres. Elevation is metres above sea level.
+Terrain box: E 518,000-530,000, N 3,649,000-3,661,000.
 
-| Layer | Source | Date | Licence | Resolution | Source datum | Verified |
-|---|---|---|---|---|---|---|
-| Terrain (69% of box) | USGS 3DEP 1 m lidar DEM tiles, projects AZ_USFSR3_D23 and AZ_Eastern_D24 | Published 2026-10-28 and 2026-06-17; downloaded 2026-11-12 | US Government work, public domain | 1 m source, averaged to a 10 m grid | NAD83 / UTM 12N (EPSG:26912), heights NAVD88 | No |
-| Terrain gap fill (31% of box, east side) | USGS 3DEP Elevation ImageServer, "best available" export | Service dated 2026-10-27; downloaded 2026-11-12 | US Government work, public domain | Requested at 5 m; underlying data is coarser than lidar (USGS 1/3 arc-second, about 10 m) | NAD83 / UTM 12N, heights NAVD88 | No |
-| Aerial imagery | USDA NAIP, 6 scenes, read from the Microsoft Planetary Computer public mirror | Flown 2025-07-12; downloaded 2026-11-12 | US Government work, public domain | 0.6 m source; textures at 1.1 m (laptop) and 2.2 m (phone/tablet) | NAD83 / UTM 12N (EPSG:26912) | No |
-| Surface samples (17) | Prismo Metals website, table "Highlight assays for samples from Hot Breccia", https://prismometals.com/project/the-hot-breccia-property/ | Samples dated 1989, 2023 and undated (Prismo); page read 2026-11-12 | Copyright Prismo Metals. Permission to reuse NOT confirmed | Point data, coordinates to the nearest metre | WGS84 as stated by the source; **UTM Zone 12N assumed** | No. Historical/vendor data, not verified by the QP |
-| Claims | **None. PLACEHOLDER box** drawn 250 m outside the sample points | Generated 2026-11-12 | n/a | n/a | WGS84 / UTM 12N | No. Not the claim boundary |
+| Layer | Source | Date | Licence | Resolution | Source datum | Exact or approximate | Verified |
+|---|---|---|---|---|---|---|---|
+| Terrain (77% of box) | USGS 3DEP 1 m lidar DEM, projects AZ_USFSR3_D23, AZ_Eastern_D24, AZ_NorthCentral_B23, CA_AZ_FEMA_R9_Lidar_2017_D18 | Downloaded 2026-11-12 | US Government work, public domain | 1 m source (some tiles read at their 4 m overview), averaged to a 10 m grid | NAD83 / UTM 12N, heights NAVD88 | Exact (measured, resampled) | No |
+| Terrain gap fill (23% of box, mostly east) | USGS 3DEP Elevation ImageServer, best-available export | Service dated 2026-10-27; downloaded 2026-11-12 | US Government work, public domain | Requested at 5 m; underlying data about 10 m | NAD83 / UTM 12N, heights NAVD88 | Exact but coarser | No |
+| Aerial imagery | USDA NAIP, 9 scenes, via the Microsoft Planetary Computer public mirror | Flown 2025-07-12; downloaded 2026-11-12 | US Government work, public domain | 0.6 m source; textures 1.46 m (laptop), 2.9 m (phone/tablet) | NAD83 / UTM 12N | Exact (resampled) | No |
+| Historical drill holes (7) | NI 43-101 Technical Report, Hot Breccia Project, B.L. Laird P.Geo., effective 2026-06-30, Table 3 (via collars.csv) | Drilled 1974-1981 | Blade Resources report | Collars to the nearest metre | WGS84 / UTM 12N | Exact as tabulated; traces ASSUMED vertical (no downhole surveys) | No. Historical, not verified by the QP |
+| Surface samples, report (30 + 1) | Same report, Table 4 (Prismo, March 2024) and QP check sample HBLR-01 (Feb 2026, ALS) (via samples.csv) | March 2024; Feb 2026 | Blade Resources report | Points to the nearest metre | WGS84 / UTM 12N | Exact as tabulated | Prismo: no. HBLR-01 is the QP's own check sample |
+| Surface samples, website (17) | Prismo Metals website table, https://prismometals.com/project/the-hot-breccia-property/ | 1989, 2023, undated; page read 2026-11-12 | Copyright Prismo Metals; permission NOT confirmed | Points to the nearest metre | WGS84 stated; **UTM Zone 12N assumed** | Exact as published, zone assumed | No. Historical/vendor data |
+| Property boundary | **None yet. PLACEHOLDER box** 250 m outside the plotted points | Generated 2026-11-12 | n/a | n/a | WGS84 / UTM 12N | Placeholder | No |
+| Report figures (Fig 2, Fig 8, Plate 2) | Extracted from the report PDF, pages 19, 33, 32 | Report effective 2026-06-30 | Blade Resources report | 1314 x 1700 px (Plate 2: 1314 x 652) | Fig 2 and Fig 8 state "WGS84 Zone 12N" | Not yet georeferenced | No |
 
 ## Files
 
-- `data/raw/` holds the downloads exactly as received (not in git). `scripts/` rebuilds everything in `data/processed/` from them.
-- The NAIP file in `data/raw/naip/` is a clipped, resampled (1.1 m) subset of the originals, not the full 0.6 m scenes.
-- Each file in `data/processed/` has a matching `.json` (or a `metadata` block) with source, date, datum and verified status.
+- `data/raw/` holds inputs exactly as received (not in git). `scripts/` rebuilds everything in `data/processed/`.
+- The NAIP file and the `usgs_3dep_1m_clips` files in `data/raw/` are clipped, resampled subsets of the originals.
+- Each file in `data/processed/` carries its own source, date, datum, accuracy and verified fields.
 
-## Assumptions and known limits
+## Assumptions
 
-1. **UTM zone of the samples is assumed.** The source page says only "Coordinates in WGS 84". As Zone 12N the points land at about 33.02 N, 110.72 W.
-2. **NAD83 and WGS84 are treated as the same.** Terrain and imagery are NAD83; samples are WGS84. The difference here is roughly 1-2 m, smaller than the 10 m terrain grid. No datum shift is applied.
-3. **Sample 75000 sits on the coarser gap-fill terrain**, so its ground elevation is less precise than the other 16.
-4. **Sample values are copied as published.** A dash in the Cu column is stored as "not reported", never zero. The Au values for 84836 (18 g/t) and 84837 (28 g/t) are unusually high and should be checked against the original source.
-5. **Sample elevations come from the terrain model**, not from the source table.
-6. **Disclaimer and all on-screen wording are placeholder drafts** for the QP to replace.
+1. NAD83 (terrain, imagery) and WGS84 (report data) are treated as the same. They differ by roughly 1-2 m here; no shift applied.
+2. Drill traces are vertical lines from the tabulated collar elevation to the tabulated depth. No downhole surveys exist.
+3. Sample pins sit on the terrain model. HBLR-01's listed elevation (2474, probably feet) is ignored.
+4. Sample values are text copied from the source files. Empty means not reported.
+5. The website samples' UTM zone is assumed (the page states only WGS84).
 
 ## Rebuild commands
 
 ```bash
-.venv/bin/python scripts/build_terrain.py
-.venv/bin/python scripts/build_imagery.py
-.venv/bin/python scripts/build_layers.py
-.venv/bin/python scripts/check_samples.py
+cd scripts
+../.venv/bin/python fetch_terrain_clips.py
+../.venv/bin/python build_terrain.py
+../.venv/bin/python build_imagery.py
+../.venv/bin/python build_layers.py
 ```

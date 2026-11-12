@@ -25,7 +25,12 @@ html, body, #app { margin: 0; height: 100%; overflow: hidden; background: var(--
 #title h1 { margin: 0; font-size: 17px; }
 #title p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 
-#panel { top: 12px; right: 12px; width: 232px; padding: 10px 12px 12px; }
+#panel { top: 12px; right: 12px; width: 250px; padding: 10px 12px 12px; max-height: calc(100% - 24px - var(--footer-h, 40px)); overflow-y: auto; }
+#panel summary { cursor: pointer; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+#panel:not([open]) summary { margin-bottom: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 0 0 6px 22px; font-size: 11px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { display: inline-block; flex: none; }
 #panel h2 { margin: 8px 0 6px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 #panel h2:first-child { margin-top: 0; }
 .layer { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; cursor: pointer; }
@@ -43,7 +48,7 @@ button:hover { background: rgba(255, 255, 255, 0.18); }
 #exag-badge { top: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px; color: #1b1300;
   background: var(--accent); border-color: transparent; font-weight: 600; white-space: nowrap; }
 
-#info { left: 12px; top: 76px; width: 290px; max-width: calc(100% - 24px); padding: 12px 14px; }
+#info { left: 12px; top: 76px; width: 320px; max-height: calc(100% - 100px - var(--footer-h, 40px)); overflow-y: auto; max-width: calc(100% - 24px); padding: 12px 14px; }
 #info h3 { margin: 0 24px 8px 0; font-size: 16px; }
 #info dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 10px; }
 #info dt { color: var(--muted); }
@@ -75,22 +80,35 @@ button:hover { background: rgba(255, 255, 255, 0.18); }
 .pin { display: flex; flex-direction: column; align-items: center; cursor: pointer; pointer-events: auto;
   padding: 0; background: none; border: 0; }
 .pin:hover { background: none; }
-.pin-label { padding: 1px 6px; margin-bottom: 2px; font-size: 11px; font-weight: 600; color: #1b1300;
-  background: var(--accent); border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
-.pin-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #1b1300;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7); }
-.pin.active .pin-label, .pin:hover .pin-label { background: #fff; }
-.pin.active .pin-dot { background: #fff; }
-#labels.far .pin-label { display: none; }
+.pin-label { padding: 1px 5px; margin-bottom: 2px; font-size: 10px; font-weight: 600; color: #111; background: rgba(255, 255, 255, 0.88);
+  border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+/* Marker shapes. Colour = sample type (set inline), never a value. */
+.mk { display: inline-block; width: 11px; height: 11px; background: var(--c, #fff); border: 2px solid #111; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75); }
+.mk.report { border-radius: 50%; }
+.mk.website { border-radius: 1px; width: 9px; height: 9px; }
+.mk.qp { transform: rotate(45deg); width: 12px; height: 12px; margin-bottom: 3px; background: #fff; border-color: #c2185b; box-shadow: 0 0 0 2px #fff; }
+.mk.collar { width: 14px; height: 14px; border-radius: 50%; background: #111; border: 3px solid #fff; box-shadow: 0 0 0 1px #111; }
+.mk.collar.not_visited { background: transparent; border-style: dashed; box-shadow: none; outline: 1px solid #111; outline-offset: -5px; }
+.mk.collar.suspected_pad { border-radius: 0; transform: rotate(45deg); background: transparent; border-color: #ffd54a; box-shadow: 0 0 0 1px #111; margin-bottom: 3px; }
+.pin.collar .pin-label { color: #fff; background: #111; border: 1px solid rgba(255, 255, 255, 0.6); font-size: 11px; }
+.pin.active .pin-label, .pin:hover .pin-label { background: var(--accent); color: #111; display: block !important; }
+.pin.active .mk { box-shadow: 0 0 0 3px var(--accent); }
+#labels.far .pin:not(.collar) .pin-label { display: none; }
+#labels.vfar .pin-label { display: none; }
 .claims-label { padding: 2px 8px; font-size: 11px; font-weight: 700; color: #fff; background: #c2185b;
   border-radius: 4px; white-space: nowrap; }
+#info table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; font-size: 12px; }
+#info th, #info td { text-align: left; padding: 4px 6px 4px 0; vertical-align: top; border-top: 1px solid var(--line); }
+#info th { color: var(--muted); font-weight: 500; }
+#info td small { display: block; color: var(--muted); }
+#info .flag { color: var(--accent); }
 
 #disclaimer { position: absolute; inset: 0; z-index: 10; background: var(--bg); display: grid; place-items: center; padding: 16px; overflow: auto; }
 .disc-card { max-width: 520px; padding: 20px 22px; background: #1b2128; border: 1px solid var(--line); border-radius: 10px; line-height: 1.5; }
 .disc-card h2 { margin: 8px 0; }
 .disc-card ul { padding-left: 18px; }
 .disc-card li { margin: 6px 0; }
-.disc-flag { margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; color: #1b1300; background: var(--accent); border-radius: 6px; }
+#disc-text { white-space: pre-wrap; }
 #disc-ok { margin-top: 8px; padding: 10px 18px; font-weight: 600; background: var(--accent); color: #1b1300; border: 0; }
 
 @media (max-width: 1000px) {
@@ -100,7 +118,7 @@ button:hover { background: rgba(255, 255, 255, 0.18); }
 @media (max-width: 640px) {
   #title { padding: 6px 10px; }
   #title h1 { font-size: 15px; }
-  #panel { top: auto; bottom: calc(var(--footer-h, 40px) + 100px); right: 8px; width: 190px; padding: 8px 10px 10px; }
+  #panel { top: auto; bottom: calc(var(--footer-h, 40px) + 100px); right: 8px; width: 230px; padding: 8px 10px; max-height: 55%; }
   .layer small, .layer-note { display: none; }
   #info { top: 96px; left: 8px; }
   #exag-badge { top: 58px; left: 8px; }

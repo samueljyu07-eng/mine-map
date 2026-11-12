@@ -6,7 +6,10 @@
     "az_m_3211002_NE_12_060_20250712",
     "az_m_3211003_NE_12_060_20250712",
     "az_m_3211003_NW_12_060_20250712",
+    "az_m_3311058_NE_12_060_20250712",
     "az_m_3311058_SE_12_060_20250712",
+    "az_m_3311059_NE_12_060_20250712",
+    "az_m_3311059_NW_12_060_20250712",
     "az_m_3311059_SE_12_060_20250712",
     "az_m_3311059_SW_12_060_20250712"
   ],
@@ -16,20 +19,21 @@
   "acquisition_year": 2025,
   "native_resolution_m": 0.6,
   "texture_resolution_m": {
-    "4096": 1.0986328125,
-    "2048": 2.197265625
+    "4096": 1.46484375,
+    "2048": 2.9296875
   },
   "tiles": "2 x 2, row 0 = north, col 0 = west",
   "bounds": {
-    "west": 521000,
+    "west": 518000,
     "east": 530000,
     "south": 3649000,
-    "north": 3658000
+    "north": 3661000
   },
   "datum_source_horizontal": "NAD83 (EPSG:26912)",
   "datum_note": "NAD83 coordinates are used unchanged as WGS84 (about 1-2 m difference, close to one texture pixel). No datum shift applied.",
   "retrieved": "2026-11-12",
   "licence": "US Government work, public domain",
   "verified": false,
+  "accuracy": "exact (orthorectified imagery, resampled)",
   "processed": "2026-11-12"
 }

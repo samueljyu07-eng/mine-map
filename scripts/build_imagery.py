@@ -2,7 +2,7 @@
 Run: .venv/bin/python scripts/build_imagery.py
 
 Source: USDA NAIP, read from the public Microsoft Planetary Computer mirror (cloud-optimised GeoTIFFs).
-Only the pixels inside the project box are downloaded, resampled to ~1.1 m. Nothing is uploaded.
+Only the pixels inside the project box are downloaded, resampled to the texture resolution (about 1.5 m). Nothing is uploaded.
 Raw copy:   data/raw/naip/naip_<date>_box_1p1m.tif   (clipped + resampled subset of the originals)
 Processed:  data/processed/imagery_r{row}c{col}_{2048|4096}.webp + imagery.json
 """
@@ -12,10 +12,8 @@ from rasterio.transform import from_bounds as tf_from_bounds
 from rasterio.warp import reproject, Resampling
 from PIL import Image
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-W, E, S, N = 521000, 530000, 3649000, 3658000
-SIZE = 8192
-BBOX_LL = [-110.776, 32.978, -110.677, 33.062]
+from config import ROOT, W, E, S, N, TEX as SIZE, bbox_lonlat
+BBOX_LL = bbox_lonlat()
 STAC = "https://planetarycomputer.microsoft.com/api/stac/v1/search"
 SIGN = "https://planetarycomputer.microsoft.com/api/sas/v1/sign"
 
@@ -25,7 +23,7 @@ latest_year = max(i["properties"]["datetime"][:4] for i in items)
 items = [i for i in items if i["properties"]["datetime"][:4] == latest_year]
 dates = sorted({i["properties"]["datetime"][:10] for i in items})
 print("newest NAIP year:", latest_year, "dates:", dates, "scenes:", len(items))
-raw_path = raw_dir / f"naip_{dates[-1]}_box_1p1m.tif"
+raw_path = raw_dir / f"naip_{dates[-1]}_box_v2_{(E - W) / SIZE:.2f}m.tif"
 
 if not raw_path.exists():
     dst = np.zeros((3, SIZE, SIZE), "uint8")
@@ -75,6 +73,6 @@ meta = {
     "datum_source_horizontal": "NAD83 (EPSG:26912)",
     "datum_note": "NAD83 coordinates are used unchanged as WGS84 (about 1-2 m difference, close to one texture pixel). No datum shift applied.",
     "retrieved": "2026-11-12", "licence": "US Government work, public domain",
-    "verified": False, "processed": datetime.date.today().isoformat(),
+    "verified": False, "accuracy": "exact (orthorectified imagery, resampled)", "processed": datetime.date.today().isoformat(),
 }
 (out / "imagery.json").write_text(json.dumps(meta, indent=2))
